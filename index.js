@@ -577,6 +577,25 @@ io.on('connection', function (socket) {
     });
 });
 
+// Search products
+app.get('/search', ifNotLoggedIn, (req, res) => {
+    const query = req.query.query;
+    if (!query) {
+        return res.redirect('/');
+    }
+    dbConnection.execute(
+        "SELECT products.*, users.name AS user_name FROM products JOIN users ON products.user_id = users.id WHERE products.name LIKE ? OR products.description LIKE ?",
+        [`%${query}%`, `%${query}%`]
+    ).then(([rows]) => {
+        res.render('home', {
+            name: req.session.userName,
+            products: rows
+        });
+    }).catch(err => {
+        console.error(err);
+        res.status(500).send('Error occurred while searching for products.');
+    });
+});
 
 
 // Start server

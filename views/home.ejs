@@ -255,6 +255,42 @@
       font-size: 1.5em;
       text-align: center;
     }
+
+    /*<!-- search form -->*/
+    .search {
+      display: flex;
+      align-items: center;
+      padding: 20px;
+      background-color: #f0f0f0;
+    }
+
+    .search form {
+      display: flex;
+      flex-grow: 1;
+    }
+
+    .search input[type="text"] {
+      flex-grow: 1;
+      padding: 0.5rem;
+      font-size: 1.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    .search button {
+      margin-left: 1rem;
+      padding: 0.5rem 1rem;
+      font-size: 1.5rem;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .search button:hover {
+      background-color: #0056b3;
+    }
   </style>
 
 
@@ -291,7 +327,15 @@
   </nav>
 
   <br><br>
+  <!-- Add a search form -->
+  <div class="search">
+    <form action="/search" method="get">
+      <input type="text" name="query" placeholder="ค้นหารายการสินค้า">
+      <button type="submit">ค้นหา</button>
+    </form>
+  </div>
 
+  <br><br>
   <div class="product">
     <span></span>
     <div class="content">รายการสินค้า</div>
