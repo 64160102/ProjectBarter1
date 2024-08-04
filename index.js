@@ -344,7 +344,7 @@ app.post('/settings', ifNotLoggedIn, upload.single('profile_image'), (req, res) 
 
 
 
-// การเชื่อมต่อ SQLite
+// การเชื่อมต่อ SQLite งงหนัก
 const sqlite3 = require('sqlite3').verbose();
 const dbPath = path.resolve(__dirname, 'notifications.db');
 
