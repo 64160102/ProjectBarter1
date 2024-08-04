@@ -97,63 +97,76 @@
 
 
 <!-- ป๊อปอัพสำหรับการยืนยันการแลกเปลี่ยน -->
-<div id="exchangePopup" class="popup">
+<div id="exchangePopup" class="popup" style="display: none;">
   <div class="popup-content">
     <p>คุณต้องการยืนยันการแลกเปลี่ยนหรือไม่?</p>
+    <p id="popupUserName" style="display:none;"></p> <!-- ซ่อนค่า user_name -->
+    <p id="popupUserId" style="display:none;"></p> <!-- ซ่อนค่า user_id -->
     <button id="confirmExchange" class="btn btn-success">ยืนยัน</button>
     <button id="cancelExchange" class="btn btn-danger">ยกเลิก</button>
-    <input type="hidden" id="productId" value="<%= product.id %>">
-
   </div>
 </div>
 
-<!--ส่งแจ้ง-->
-
-<script>
- $('#confirmExchange').click(function() {
-    const exchangeData = {
-        user_name: 'User1', // ค่าที่ต้องการส่งไปกับคำร้อง สามารถเปลี่ยนได้
-        product_id: $('#productId').val()
-    };
-
-    $.ajax({
-        type: 'POST',
-        url: '/confirm-exchange',
-        data: exchangeData,
-        success: function(response) {
-            alert(response.message);
-            window.location.href = '/notifications';
-        },
-        error: function(error) {
-            console.error('Error:', error);
-        }
-    });
-});
-
-</script>
-
-
 <!-- สคริปป๊อปอัพสำหรับการยืนยันการแลกเปลี่ยน -->
 <script>
-
-document.querySelectorAll('.btn-exchange').forEach(button => {
-  button.addEventListener('click', function() {
-    const popup = document.getElementById('exchangePopup');
-    popup.style.display = 'flex';
+  
+  document.querySelectorAll('.btn-exchange').forEach(button => {
+    button.addEventListener('click', function() {
+      console.log('Exchange button clicked'); // ตรวจสอบการคลิก
+      const popup = document.getElementById('exchangePopup');
+      const userName = this.getAttribute('data-user-name');
+      const userId = this.getAttribute('data-user-id');
+      console.log('UserName:', userName); // ตรวจสอบค่า userName
+      console.log('UserId:', userId); // ตรวจสอบค่า userId
+      popup.querySelector('#popupUserName').innerText = userName;
+      popup.querySelector('#popupUserId').innerText = userId;
+      popup.style.display = 'flex'; // แสดงป๊อปอัพ
+    });
   });
-});
 
-document.getElementById('confirmExchange').addEventListener('click', function() {
-  // โค้ดจัดการการยืนยันการแลกเปลี่ยน
-  console.log('แลกเปลี่ยนยืนยัน');
-  document.getElementById('exchangePopup').style.display = 'none';
-});
+  document.getElementById('confirmExchange').addEventListener('click', function() {
+    // ดึงข้อมูล user_name และ user_id จาก popup
+    console.log('Confirm button clicked');
+    const userName = document.getElementById('popupUserName').innerText;
+    const userId = document.getElementById('popupUserId').innerText;
 
-document.getElementById('cancelExchange').addEventListener('click', function() {
-  document.getElementById('exchangePopup').style.display = 'none';
-});
+    // สร้างข้อมูลการยืนยันการแลกเปลี่ยน
+    const exchangeData = {
+      user_name: userName,
+      user_id: userId
+    };
 
+    // ส่งข้อมูลการยืนยันการแลกเปลี่ยนไปยังเซิร์ฟเวอร์
+    fetch('/confirm-exchange', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(exchangeData)
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Network response was not ok ' + response.statusText);
+      }
+      return response.json();
+    })
+    .then(data => { 
+      console.log('แลกเปลี่ยนยืนยัน:', data);
+      document.getElementById('exchangePopup').style.display = 'none';
+      console.log('Reloading page');
+      // คุณสามารถเพิ่มการอัพเดทการแจ้งเตือนที่แสดงในหน้านี้ได้ถ้าต้องการ
+      location.reload(); // โหลดหน้าเว็บใหม่เพื่ออัพเดทการแจ้งเตือน
+    })
+    .catch(error => {
+      console.error('เกิดข้อผิดพลาด:', error);
+      alert('เกิดข้อผิดพลาดในการแลกเปลี่ยน: ' + error.message);
+    });
+  });
 
+  document.getElementById('cancelExchange').addEventListener('click', function() {
+    document.getElementById('exchangePopup').style.display = 'none';
+    console.log('Cancel button clicked');
+  });
 </script>
 
 
