@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,6 +11,7 @@
     /* ใส่ CSS ที่จำเป็นของคุณ */
   </style>
 </head>
+
 <body>
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container-fluid">
@@ -56,160 +58,208 @@
   </div>
   <script src="/socket.io/socket.io.js"></script>
   <script>
-     document.addEventListener('DOMContentLoaded', function() {
-    const chatMessages = document.getElementById('chat-messages');
-    const chatInput = document.getElementById('chat-input');
-    const sendMessageButton = document.getElementById('send-message');
-    const fileInput = document.querySelector('.hidden-file-input');
-    const chatPartners = document.getElementById('chat-partners');
-    const userName = '<%= name %>';
-    const userID = '<%= userID %>';
-    const socket = io({
-      query: `userName=${userName}`
-    });
+    document.addEventListener('DOMContentLoaded', function() {
+      const chatMessages = document.getElementById('chat-messages');
+      const chatInput = document.getElementById('chat-input');
+      const sendMessageButton = document.getElementById('send-message');
+      const fileInput = document.querySelector('.hidden-file-input');
+      const chatPartners = document.getElementById('chat-partners');
+      const userName = '<%= name %>';
+      const userID = '<%= userID %>';
+      const socket = io({
+        query: `userName=${userName}`
+      });
 
-    function loadChatPartners() {
-      fetch('/chat-partners')
+      function loadChatPartners() {
+    fetch('/chat-partners')
         .then(response => response.json())
         .then(data => {
-          chatPartners.innerHTML = '';
-          data.forEach(partner => {
-            const partnerElement = document.createElement('div');
-            partnerElement.classList.add('contact');
-            partnerElement.textContent = partner.product_user;
-            partnerElement.addEventListener('click', () => {
-              loadChatHistory(partner.product_user);
+            chatPartners.innerHTML = '';
+            data.forEach(partner => {
+                const partnerElement = document.createElement('div');
+                partnerElement.classList.add('contact');
+                partnerElement.textContent = partner.product_user;
+                partnerElement.addEventListener('click', () => {
+                    loadChatHistory(partner.product_user);
+                });
+                chatPartners.appendChild(partnerElement);
             });
-            chatPartners.appendChild(partnerElement);
-          });
         })
         .catch(error => console.error('Error fetching chat partners:', error));
-    }
+}
 
-    function loadChatHistory(productUser) {
-      fetch(`/chat-history/${productUser}`)
-        .then(response => response.json())
-        .then(data => {
-          chatMessages.innerHTML = '';
-          chatMessages.dataset.productUser = productUser;
-          data.forEach(msg => {
-            if (msg.image_url) {
-              displayImageMessage(msg);
-            } else {
-              displayMessage(msg);
-            }
-          });
-          chatMessages.scrollTop = chatMessages.scrollHeight;
-        })
-        .catch(error => console.error('Error fetching chat history:', error));
-    }
 
-    sendMessageButton.addEventListener('click', () => {
-      const message = chatInput.value;
-      if (message.trim() !== '') {
-        const msg = {
-          message,
-          user_name: userName,
-          productUser: chatMessages.dataset.productUser,
-          userID: userID,
-          time: new Date().toLocaleString() // เพิ่มการตั้งค่าเวลา
-        };
-        socket.emit('chat message', msg);
-        chatInput.value = '';
-      }
-    });
-
-    fileInput.addEventListener('change', () => {
-      const file = fileInput.files[0];
-      if (file) {
-        sendImage(file);
-      }
-    });
-
-    socket.on('chat message', (msg) => {
-      if ((msg.user_name === userName && msg.productUser === chatMessages.dataset.productUser) ||
-        (msg.user_name === chatMessages.dataset.productUser && msg.productUser === userName)) {
-        displayMessage(msg);
-      }
-    });
-
-    socket.on('chat image', (msg) => {
-      if ((msg.user_name === userName && msg.productUser === chatMessages.dataset.productUser) ||
-        (msg.user_name === chatMessages.dataset.productUser && msg.productUser === userName)) {
-        displayImageMessage(msg);
-      }
-    });
-
-    function displayMessage(msg) {
-      const messageElement = document.createElement('div');
-      messageElement.classList.add('message');
-      messageElement.classList.add(msg.user_name === userName ? 'sent' : 'received');
-      messageElement.innerHTML = `<div class="text">${msg.message}</div><small>${msg.time || new Date().toLocaleString()}</small>`;
-      chatMessages.appendChild(messageElement);
+      function loadChatHistory(productUser) {
+  fetch(`/chat-history/${userName}/${productUser}`)
+    .then(response => response.json())
+    .then(data => {
+      chatMessages.innerHTML = '';
+      chatMessages.dataset.productUser = productUser;
+      data.forEach(msg => {
+        if (msg.image_url) {
+          displayImageMessage(msg);
+        } else {
+          displayMessage(msg);
+        }
+      });
       chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
+    })
+    .catch(error => console.error('Error fetching chat history:', error));
+}
 
-    function displayImageMessage(msg) {
-      const messageElement = document.createElement('div');
-      messageElement.classList.add('message');
-      messageElement.classList.add(msg.user_name === userName ? 'sent' : 'received');
-      const imgElement = document.createElement('img');
-      imgElement.src = msg.image_url;
-      imgElement.alt = "Chat Image";
-      imgElement.style.maxWidth = '100%'; // แก้ไขขนาดรูปภาพให้พอดี
-      messageElement.appendChild(imgElement);
-      messageElement.innerHTML += `<br><small>${msg.time || new Date().toLocaleString()}</small>`;
-      chatMessages.appendChild(messageElement);
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
 
-    function sendImage(imageFile) {
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        const img = new Image();
-        img.onload = function() {
-          const canvas = document.createElement('canvas');
-          const maxSize = 500; // กำหนดขนาดสูงสุดที่ต้องการ
-          let width = img.width;
-          let height = img.height;
-
-          if (width > height) {
-            if (width > maxSize) {
-              height *= maxSize / width;
-              width = maxSize;
-            }
-          } else {
-            if (height > maxSize) {
-              width *= maxSize / height;
-              height = maxSize;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, width, height);
-          const resizedImageData = canvas.toDataURL('image/jpeg', 0.7); // ปรับ quality ของ JPEG ตามต้องการ
-
+      sendMessageButton.addEventListener('click', () => {
+        const message = chatInput.value;
+        if (message.trim() !== '') {
           const msg = {
+            message,
             user_name: userName,
             productUser: chatMessages.dataset.productUser,
-            image_url: resizedImageData,
-            time: new Date().toLocaleTimeString()
+            userID: userID,
+            time: new Date().toLocaleString()
           };
+          socket.emit('chat message', msg);
+          chatInput.value = '';
+        }
+      });
 
-          // Display the image message immediately
-          displayImageMessage(msg);
+      fileInput.addEventListener('change', () => {
+        const file = fileInput.files[0];
+        if (file) {
+          sendImage(file);
+        }
+      });
+      socket.on('chat message', (msg) => {
+  if ((msg.user_name === userName && msg.productUser === chatMessages.dataset.productUser) ||
+      (msg.user_name === chatMessages.dataset.productUser && msg.productUser === userName)) {
+    displayMessage(msg);
+    // ไม่ต้องเรียก loadChatHistory ที่นี่
+  }
+});
 
-          socket.emit('chat image', msg);
+socket.on('chat image', (msg) => {
+  if ((msg.user_name === userName && msg.productUser === chatMessages.dataset.productUser) ||
+      (msg.user_name === chatMessages.dataset.productUser && msg.productUser === userName)) {
+    displayImageMessage(msg);
+    // ไม่ต้องเรียก loadChatHistory ที่นี่
+  }
+});
+
+
+
+      socket.on('chat history', (messages) => {
+        chatMessages.innerHTML = '';
+        messages.forEach(msg => {
+          if (msg.image_url) {
+            displayImageMessage(msg);
+          } else {
+            displayMessage(msg);
+          }
+        });
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      });
+
+      socket.on('update chat partners', (data) => {
+        // ตรวจสอบว่าผู้ใช้หรือผู้รับข้อความมีอยู่ในรายชื่อหรือไม่ หากไม่มี ให้เพิ่ม
+        const partnerExists = Array.from(chatPartners.children).some(partner => partner.textContent === data.product_user || partner.textContent === data.user_name);
+        if (!partnerExists) {
+          const partnerElement = document.createElement('div');
+          partnerElement.classList.add('contact');
+          partnerElement.textContent = data.user_name === userName ? data.product_user : data.user_name;
+          partnerElement.addEventListener('click', () => {
+            loadChatHistory(partnerElement.textContent);
+          });
+          chatPartners.appendChild(partnerElement);
+        }
+      });
+
+
+      function displayMessage(msg) {
+  const messageElement = document.createElement('div');
+  messageElement.classList.add('message');
+  messageElement.classList.add(msg.user_name === userName ? 'sent' : 'received');
+  messageElement.innerHTML = `<div class="text">${msg.message}</div><small>${msg.time || new Date().toLocaleString()}</small>`;
+  chatMessages.appendChild(messageElement);
+  chatMessages.scrollTop = chatMessages.scrollHeight; // เลื่อนลงไปที่ข้อความล่าสุด
+}
+
+function displayImageMessage(msg) {
+  const messageElement = document.createElement('div');
+  messageElement.classList.add('message');
+  messageElement.classList.add(msg.user_name === userName ? 'sent' : 'received');
+  const imgElement = document.createElement('img');
+  imgElement.src = msg.image_url;
+  imgElement.alt = "Chat Image";
+  imgElement.style.maxWidth = '100%'; // แก้ไขขนาดรูปภาพให้พอดี
+  messageElement.appendChild(imgElement);
+  messageElement.innerHTML += `<br><small>${msg.time || new Date().toLocaleString()}</small>`;
+  chatMessages.appendChild(messageElement);
+  chatMessages.scrollTop = chatMessages.scrollHeight; // เลื่อนลงไปที่รูปภาพล่าสุด
+}
+
+
+      function sendImage(imageFile) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          const img = new Image();
+          img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const maxSize = 500; // กำหนดขนาดสูงสุดของรูปภาพ
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+              if (width > maxSize) {
+                height *= maxSize / width;
+                width = maxSize;
+              }
+            } else {
+              if (height > maxSize) {
+                width *= maxSize / height;
+                height = maxSize;
+              }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            canvas.toBlob(function(blob) {
+              const formData = new FormData();
+              formData.append('image', blob, imageFile.name);
+
+              fetch('/upload', {
+                  method: 'POST',
+                  body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                  if (data.imageUrl) {
+                    const msg = {
+                      imageUrl: data.imageUrl,
+                      user_name: userName,
+                      productUser: chatMessages.dataset.productUser,
+                      userID: userID,
+                      time: new Date().toLocaleString()
+                    };
+                    socket.emit('chat image', msg);
+                  }
+                })
+                .catch(error => console.error('Error uploading image:', error));
+            }, 'image/jpeg');
+          };
+          img.src = event.target.result;
         };
-        img.src = event.target.result;
-      };
-      reader.readAsDataURL(imageFile);
-    }
+        reader.readAsDataURL(imageFile);
+      }
 
-    loadChatPartners();
-  });
+      // โหลดผู้ที่เคยสนทนาด้วยเมื่อเริ่มต้น
+      loadChatPartners();
+    });
   </script>
+
 </body>
+
 </html>
