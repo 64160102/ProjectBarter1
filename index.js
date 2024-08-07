@@ -61,6 +61,76 @@ const ifLoggedIn = (req, res, next) => {
     next();
 };
 
+const isAdmin = (req, res, next) => {
+    const userId = req.session.userID;
+    dbConnection.execute('SELECT r.role FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = ?', [userId])
+        .then(([rows]) => {
+            if (rows.length > 0 && rows[0].role === 'admin') {
+                next();
+            } else {
+                res.status(403).send('Access denied.');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            res.status(500).send('An error occurred while checking admin privileges.');
+        });
+};
+
+app.get('/admin', ifNotLoggedIn, isAdmin, (req, res) => {
+    res.render('admin', {
+        name: req.session.userName
+    });
+});
+
+// Route for fetching dashboard data
+app.get('/admin/dashboard-data', ifNotLoggedIn, isAdmin, async (req, res) => {
+    try {
+        // Query to get total number of users
+        const [totalUsersRows] = await dbConnection.execute('SELECT COUNT(*) as totalUsers FROM users');
+        const totalUsers = totalUsersRows[0].totalUsers;
+
+        // Query to get total number of exchanged items
+        const [totalExchangedItemsRows] = await dbConnection.execute('SELECT COUNT(*) as totalExchangedItems FROM products WHERE status = "exchange"');
+        const totalExchangedItems = totalExchangedItemsRows[0].totalExchangedItems;
+
+        // Query to get total number of free items
+        const [totalFreeItemsRows] = await dbConnection.execute('SELECT COUNT(*) as totalFreeItems FROM products WHERE status = "free"');
+        const totalFreeItems = totalFreeItemsRows[0].totalFreeItems;
+
+        // Query to get the latest notifications
+        const [latestNotificationsRows] = await dbConnection.execute('SELECT * FROM notifications ORDER BY created_at DESC LIMIT 5');
+        const latestNotifications = latestNotificationsRows.map(row => ({ message: row.message }));
+
+        res.json({
+            totalUsers,
+            totalExchangedItems,
+            totalFreeItems,
+            latestNotifications
+        });
+    } catch (err) {
+        console.error('Error fetching dashboard data:', err);
+        res.status(500).json({ error: 'Error fetching dashboard data' });
+    }
+});
+
+// เส้นทางสำหรับดูรายการสินค้า
+app.get('/items', ifNotLoggedIn, isAdmin, (req, res) => {
+    dbConnection.execute('SELECT * FROM products')
+        .then(([rows]) => {
+            res.render('items', {
+                user: {
+                    name: req.session.userName,
+                    products: rows
+                }
+            });
+        })
+        .catch(err => {
+            console.error(err);
+            res.status(500).send('An error occurred while fetching items.');
+        });
+});
+
 // Root page
 app.get('/', ifNotLoggedIn, (req, res) => {
     console.log('User name:', req.session.userName); // Log the username
@@ -165,25 +235,49 @@ app.post('/', ifLoggedIn, [
 
 ], (req, res) => {
     const validation_result = validationResult(req);
-    const { user_pass, user_email } = req.body;
+    const { user_email, user_pass } = req.body;
     if (validation_result.isEmpty()) {
-        dbConnection.execute("SELECT * FROM users WHERE email = ?", [user_email])
+        dbConnection.execute('SELECT * FROM users WHERE email=?', [user_email])
             .then(([rows]) => {
+                if (rows.length === 1) {
+                    bcrypt.compare(user_pass, rows[0].password).then(compare_result => {
+                        if (compare_result === true) {
+                            req.session.isLoggedIn = true;
+                            req.session.userID = rows[0].id;
+                            req.session.userName = rows[0].name;
 
-                bcrypt.compare(user_pass, rows[0].password).then(compare_result => {
-                    if (compare_result === true) {
-                        req.session.isLoggedIn = true;
-                        req.session.userID = rows[0].id; // Store userID in session
-                        req.session.userName = rows[0].name; // Store username in session
-                        res.redirect('/');
-                    } else {
-                        res.render('login-register', {
-                            login_errors: ['Invalid Password']
-                        });
-                    }
-                }).catch(err => {
-                    if (err) throw err;
-                });
+                            // Check the role of the user
+                            dbConnection.execute('SELECT r.role FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = ?', [rows[0].id])
+                                .then(([roleRows]) => {
+                                    if (roleRows.length > 0) {
+                                        req.session.userRole = roleRows[0].role;
+                                        if (roleRows[0].role === 'admin') {
+                                            return res.redirect('/admin');
+                                        } else {
+                                            return res.redirect('/');
+                                        }
+                                    } else {
+                                        req.session.userRole = 'user'; // If no role found, set to user
+                                        return res.redirect('/');
+                                    }
+                                })
+                                .catch(err => {
+                                    console.error(err);
+                                    res.status(500).send('An error occurred while checking user role.');
+                                });
+                        } else {
+                            res.render('login-register', {
+                                login_errors: ['Invalid Password']
+                            });
+                        }
+                    }).catch(err => {
+                        if (err) throw err;
+                    });
+                } else {
+                    res.render('login-register', {
+                        login_errors: ['Invalid Email Address']
+                    });
+                }
             }).catch(err => {
                 if (err) throw err;
             });
@@ -191,7 +285,6 @@ app.post('/', ifLoggedIn, [
         let allErrors = validation_result.errors.map((error) => {
             return error.msg;
         });
-
         res.render('login-register', {
             login_errors: allErrors
         });
@@ -534,6 +627,7 @@ app.get('/view-user/:user_id', ifNotLoggedIn, function (req, res) {
 
 
 
+// Route สำหรับแอดมินแก้ไขผลิตภัณฑ์
 app.get('/edit-product/:product_id', ifNotLoggedIn, function (req, res) {
     const productId = req.params.product_id;
     const query = 'SELECT * FROM products WHERE id = ?';
@@ -542,8 +636,8 @@ app.get('/edit-product/:product_id', ifNotLoggedIn, function (req, res) {
         .then(([rows]) => {
             if (rows.length > 0) {
                 const product = rows[0];
-                // ตรวจสอบว่าผู้ใช้เป็นเจ้าของสินค้าหรือไม่
-                if (product.user_id !== req.session.userID) {
+                // ตรวจสอบ role ของผู้ใช้
+                if (req.session.userRole !== 'admin' && product.user_id !== req.session.userID) {
                     return res.status(403).send(`
                         <html>
                         <head>
@@ -619,7 +713,7 @@ app.post('/edit-product/:product_id', ifNotLoggedIn, upload.single('image'), fun
         .then(([rows]) => {
             if (rows.length > 0) {
                 const product = rows[0];
-                if (product.user_id !== req.session.userID) {
+                if (req.session.userRole !== 'admin' && product.user_id !== req.session.userID) {
                     return res.status(403).send('คุณไม่มีสิทธิ์ในการแก้ไขผลิตภัณฑ์นี้');
                 }
                 // แก้ไขสินค้า โดยตรวจสอบค่า undefined และกำหนดเป็น null ถ้าจำเป็น
@@ -635,7 +729,11 @@ app.post('/edit-product/:product_id', ifNotLoggedIn, upload.single('image'), fun
             }
         })
         .then(() => {
-            res.redirect('/view-user/' + req.session.userID); // เปลี่ยนเส้นทางหลังจากแก้ไขสำเร็จ
+            if (req.session.userRole !== 'admin') {
+                res.redirect('/view-user/' + req.session.userID); // เปลี่ยนเส้นทางไปยังหน้าดูข้อมูลผู้ใช้
+            } else {
+                res.redirect('/items'); // เปลี่ยนเส้นทางไปยังหน้ารายการสินค้าสำหรับแอดมิน
+            }
         })
         .catch(err => {
             console.error(err);
@@ -659,7 +757,7 @@ app.post('/delete-product/:product_id', ifNotLoggedIn, function (req, res) {
         .then(([rows]) => {
             if (rows.length > 0) {
                 const product = rows[0];
-                if (product.user_id !== req.session.userID) {
+                if (req.session.userRole !== 'admin' && product.user_id !== req.session.userID) {
                     return res.status(403).send(`
                         <html>
                         <head>
@@ -751,7 +849,11 @@ app.post('/delete-product/:product_id', ifNotLoggedIn, function (req, res) {
         })
         .then(() => {
             // Redirect หลังจากลบเสร็จ
-            res.redirect('/view-user/' + req.session.userID);
+            if (req.session.userRole !== 'admin') {
+                res.redirect('/view-user/' + req.session.userID); // เปลี่ยนเส้นทางไปยังหน้าดูข้อมูลผู้ใช้
+            } else {
+                res.redirect('/items'); // เปลี่ยนเส้นทางไปยังหน้ารายการสินค้าสำหรับแอดมิน
+            }
         })
         .catch(err => {
             console.error(err);
@@ -830,11 +932,23 @@ app.get('/search', ifNotLoggedIn, (req, res) => {
     
     // ดำเนินการ query ไปที่ฐานข้อมูล
     dbConnection.execute(sql, params).then(([rows]) => {
-         // เมื่อ query เสร็จสิ้น ให้ render หน้า home พร้อมกับผลลัพธ์ของสินค้า
-        res.render('home', {
-            name: req.session.userName,  // ส่งชื่่อผู้ใช้ไปยัง template
-            products: rows   // ส่งผลลัพธ์ของสินค้าไปยัง template
-        });
+        // ตรวจสอบบทบาทของผู้ใช้
+        const userRole = req.session.userRole;
+        
+        
+        if (userRole !== 'admin') {
+            // ถ้าเป็น user ให้ render หน้า home
+            res.render('home', {
+                name: req.session.userName, // ส่งชื่อผู้ใช้ไปยัง template
+                products: rows // ส่งผลลัพธ์ของสินค้าไปยัง template
+            });
+        } else {
+            // ถ้าเป็น admin ให้ render หน้า items
+            res.render('items', {
+                //name: req.session.userName, // ส่งชื่อผู้ใช้ไปยัง template
+                products: rows // ส่งผลลัพธ์ของสินค้าไปยัง template
+            });
+        }
     }).catch(err => {
         console.error(err);
         res.status(500).send('Error occurred while searching for products.');
