@@ -855,20 +855,12 @@ app.get('/search', ifNotLoggedIn, (req, res) => {
         // ตรวจสอบบทบาทของผู้ใช้
         const userRole = req.session.userRole;
         
-        
-        if (userRole !== 'admin') {
             // ถ้าเป็น user ให้ render หน้า home
             res.render('home', {
                 name: req.session.userName, // ส่งชื่อผู้ใช้ไปยัง template
                 products: rows // ส่งผลลัพธ์ของสินค้าไปยัง template
             });
-        } else {
-            // ถ้าเป็น admin ให้ render หน้า items
-            res.render('items', {
-                //name: req.session.userName, // ส่งชื่อผู้ใช้ไปยัง template
-                products: rows // ส่งผลลัพธ์ของสินค้าไปยัง template
-            });
-        }
+        
     }).catch(err => {
         console.error(err);
         res.status(500).send('Error occurred while searching for products.');
