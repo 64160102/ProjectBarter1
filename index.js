@@ -876,10 +876,36 @@ app.get('/search', ifNotLoggedIn, (req, res) => {
 });
 
 
+// เส้นทางค้นหาสินค้าสำหรับ admin
+app.get('/admin/search', ifNotLoggedIn, isAdmin, (req, res) => {
+    const query = req.query.query;
+    const status = req.query.status;
 
+    // สร้าง SQL query สำหรับค้นหาสินค้า
+    let sql = "SELECT products.*, users.name AS user_name FROM products JOIN users ON products.user_id = users.id WHERE (products.name LIKE ? OR products.description LIKE ?)";
+    let params = [`%${query}%`, `%${query}%`];
 
+    // ถ้ามีพารามิเตอร์ status เพิ่มเงื่อนไขใน query
+    if (status) {
+        sql += " AND products.status = ?";
+        params.push(status);
+    }
 
-
+    // ดำเนินการ query ไปที่ฐานข้อมูล
+    dbConnection.execute(sql, params)
+        .then(([rows]) => {
+            res.render('items', {
+                user: {
+                    name: req.session.userName,
+                    products: rows
+                }
+            });
+        })
+        .catch(err => {
+            console.error(err);
+            res.status(500).send('Error occurred while searching for products.');
+        });
+});
 
 
 
