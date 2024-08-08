@@ -238,6 +238,15 @@ app.post('/', ifLoggedIn, [
         dbConnection.execute('SELECT * FROM users WHERE email=?', [user_email])
             .then(([rows]) => {
                 if (rows.length === 1) {
+                    const user = rows[0];
+
+                    // ตรวจสอบสถานะการแบน
+                    if (user.banned) {
+                        return res.render('login-register', {
+                            login_errors: ['Your account has been banned. Please contact support.']
+                        });
+                    }
+
                     bcrypt.compare(user_pass, rows[0].password).then(compare_result => {
                         if (compare_result === true) {
                             req.session.isLoggedIn = true;
@@ -854,7 +863,7 @@ app.get('/search', ifNotLoggedIn, (req, res) => {
     dbConnection.execute(sql, params).then(([rows]) => {
         // ตรวจสอบบทบาทของผู้ใช้
         const userRole = req.session.userRole;
-        
+
             // ถ้าเป็น user ให้ render หน้า home
             res.render('home', {
                 name: req.session.userName, // ส่งชื่อผู้ใช้ไปยัง template
@@ -899,7 +908,80 @@ app.get('/admin/search', ifNotLoggedIn, isAdmin, (req, res) => {
         });
 });
 
+// เส้นทางเพื่อแสดงหน้าการจัดการผู้ใช้
+app.get('/admin/users', ifNotLoggedIn, isAdmin, (req, res) => {
+    dbConnection.execute('SELECT users.*, roles.role FROM users LEFT JOIN user_roles ON users.id = user_roles.user_id LEFT JOIN roles ON user_roles.role_id = roles.id')
+        .then(([rows]) => {
+            res.render('users', {
+                users: rows
+            });
+        })
+        .catch(err => {
+            console.error(err);
+            res.status(500).send('เกิดข้อผิดพลาดขณะดึงข้อมูลผู้ใช้');
+        });
+});
 
+// ฟังก์ชันสำหรับอัปเดตบทบาทของผู้ใช้
+function updateUserRole(userId, newRoleId) {
+    // ลบบทบาทเก่าของผู้ใช้
+    dbConnection.execute('DELETE FROM user_roles WHERE user_id = ?', [userId])
+        .then(() => {
+            // เพิ่มบทบาทใหม่ให้กับผู้ใช้
+            return dbConnection.execute('INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)', [userId, newRoleId]);
+        })
+        .then(() => {
+            console.log('User role updated successfully.');
+        })
+        .catch(err => {
+            console.error('Error updating user role:', err);
+        });
+}
+
+// เส้นทางเพื่ออัปเดตบทบาทของผู้ใช้
+app.post('/admin/users/:userId/role', ifNotLoggedIn, isAdmin, (req, res) => {
+    const userId = req.params.userId;
+    const newRole = req.body.role;
+    
+    dbConnection.execute('SELECT id FROM roles WHERE role = ?', [newRole])
+        .then(([rows]) => {
+            if (rows.length > 0) {
+                const roleId = rows[0].id;
+                return dbConnection.execute('REPLACE INTO user_roles (user_id, role_id) VALUES (?, ?)', [userId, roleId]);
+            } else {
+                throw new Error('Role not found');
+            }
+        })
+        .then(() => {
+            res.redirect('/admin/users');
+        })
+        .catch(err => {
+            console.error(err);
+            res.status(500).send('เกิดข้อผิดพลาดขณะอัปเดตบทบาทผู้ใช้');
+        });
+});
+
+// เส้นทางเพื่อแบนหรือยกเลิกการแบนผู้ใช้
+app.post('/admin/users/:userId/ban', ifNotLoggedIn, isAdmin, (req, res) => {
+    const userId = req.params.userId;
+    
+    dbConnection.execute('SELECT banned FROM users WHERE id = ?', [userId])
+        .then(([rows]) => {
+            if (rows.length > 0) {
+                const newStatus = !rows[0].banned; // Toggle ban status
+                return dbConnection.execute('UPDATE users SET banned = ? WHERE id = ?', [newStatus, userId]);
+            } else {
+                throw new Error('User not found');
+            }
+        })
+        .then(() => {
+            res.redirect('/admin/users');
+        })
+        .catch(err => {
+            console.error(err);
+            res.status(500).send('เกิดข้อผิดพลาดขณะอัปเดตสถานะผู้ใช้');
+        });
+});
 
 
 io.on('connection', (socket) => {
