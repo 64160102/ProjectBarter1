@@ -113,7 +113,7 @@ app.get('/admin/dashboard-data', ifNotLoggedIn, isAdmin, async (req, res) => {
 });
 
 // เส้นทางสำหรับดูรายการสินค้า
-app.get('/items', ifNotLoggedIn, isAdmin, (req, res) => {
+app.get('/admin/items', ifNotLoggedIn, isAdmin, (req, res) => {
     dbConnection.execute('SELECT * FROM products')
         .then(([rows]) => {
             res.render('items', {
@@ -913,7 +913,8 @@ app.get('/admin/users', ifNotLoggedIn, isAdmin, (req, res) => {
     dbConnection.execute('SELECT users.*, roles.role FROM users LEFT JOIN user_roles ON users.id = user_roles.user_id LEFT JOIN roles ON user_roles.role_id = roles.id')
         .then(([rows]) => {
             res.render('users', {
-                users: rows
+                users: rows,
+                name: req.session.userName
             });
         })
         .catch(err => {
@@ -924,11 +925,17 @@ app.get('/admin/users', ifNotLoggedIn, isAdmin, (req, res) => {
 
 // ฟังก์ชันสำหรับอัปเดตบทบาทของผู้ใช้
 function updateUserRole(userId, newRoleId) {
-    // ลบบทบาทเก่าของผู้ใช้
-    dbConnection.execute('DELETE FROM user_roles WHERE user_id = ?', [userId])
-        .then(() => {
-            // เพิ่มบทบาทใหม่ให้กับผู้ใช้
-            return dbConnection.execute('INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)', [userId, newRoleId]);
+    dbConnection.execute('SELECT role_id FROM user_roles WHERE user_id = ?', [userId])
+        .then(([rows]) => {
+            if (rows.length > 0 && rows[0].role_id === newRoleId) {
+                console.log('บทบาทที่ต้องการอัปเดตเป็นบทบาทเดิม');
+                return Promise.resolve(); // ไม่จำเป็นต้องทำอะไรเพิ่มเติม
+            } else {
+                return dbConnection.execute('DELETE FROM user_roles WHERE user_id = ?', [userId])
+                    .then(() => {
+                        return dbConnection.execute('INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)', [userId, newRoleId]);
+                    });
+            }
         })
         .then(() => {
             console.log('User role updated successfully.');
@@ -947,7 +954,7 @@ app.post('/admin/users/:userId/role', ifNotLoggedIn, isAdmin, (req, res) => {
         .then(([rows]) => {
             if (rows.length > 0) {
                 const roleId = rows[0].id;
-                return dbConnection.execute('REPLACE INTO user_roles (user_id, role_id) VALUES (?, ?)', [userId, roleId]);
+                return updateUserRole(userId, roleId);
             } else {
                 throw new Error('Role not found');
             }
