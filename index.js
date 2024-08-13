@@ -129,6 +129,34 @@ app.get('/admin/items', ifNotLoggedIn, isAdmin, (req, res) => {
         });
 });
 
+app.get('/admin/a-upload', ifNotLoggedIn, (req, res) => {
+    res.render('a-upload', {
+        name: req.session.userName
+    });
+});
+
+app.post('/a-upload', ifNotLoggedIn, upload.single('product_image'), (req, res) => {
+    if (!req.file) {
+        return res.render('a-upload', {
+            msg: 'Error: No File Selected!',
+            name: req.session.userName
+        });
+    }
+
+    const { product_name, product_description, product_location, product_status } = req.body;
+    const product_image = `/uploads/${req.file.filename}`;
+
+    dbConnection.execute(
+        'INSERT INTO products (name, description, image, location, status, user_id) VALUES (?, ?, ?, ?, ?, ?)',
+        [product_name, product_description, product_image, product_location, product_status, req.session.userID]
+    ).then(result => {
+        res.redirect('/admin/items');
+    }).catch(err => {
+        console.error(err);
+        res.send('Error occurred while uploading the product.');
+    });
+});
+
 // Root page
 app.get('/', ifNotLoggedIn, (req, res) => {
     console.log('User name:', req.session.userName); // Log the username
@@ -661,7 +689,7 @@ app.post('/edit-product/:product_id', ifNotLoggedIn, upload.single('image'), fun
             if (req.session.userRole !== 'admin') {
                 res.redirect('/view-user/' + req.session.userID); // เปลี่ยนเส้นทางไปยังหน้าดูข้อมูลผู้ใช้
             } else {
-                res.redirect('/items'); // เปลี่ยนเส้นทางไปยังหน้ารายการสินค้าสำหรับแอดมิน
+                res.redirect('/admin/items'); // เปลี่ยนเส้นทางไปยังหน้ารายการสินค้าสำหรับแอดมิน
             }
         })
         .catch(err => {
@@ -781,7 +809,7 @@ app.post('/delete-product/:product_id', ifNotLoggedIn, function (req, res) {
             if (req.session.userRole !== 'admin') {
                 res.redirect('/view-user/' + req.session.userID); // เปลี่ยนเส้นทางไปยังหน้าดูข้อมูลผู้ใช้
             } else {
-                res.redirect('/items'); // เปลี่ยนเส้นทางไปยังหน้ารายการสินค้าสำหรับแอดมิน
+                res.redirect('/admin/items'); // เปลี่ยนเส้นทางไปยังหน้ารายการสินค้าสำหรับแอดมิน
             }
         })
         .catch(err => {
@@ -987,6 +1015,48 @@ app.post('/admin/users/:userId/ban', ifNotLoggedIn, isAdmin, (req, res) => {
         .catch(err => {
             console.error(err);
             res.status(500).send('เกิดข้อผิดพลาดขณะอัปเดตสถานะผู้ใช้');
+        });
+});
+
+function sendNotification(senderId, receiverId, message) {
+    const status = 'pending'; // สถานะเริ่มต้น
+    dbConnection.execute('INSERT INTO notifications (sender_id, receiver_id, message, status) VALUES (?, ?, ?, ?)', 
+    [senderId, receiverId, message, status])
+    .then(() => {
+        console.log('Notification sent successfully.');
+    })
+    .catch(err => {
+        console.error('Error sending notification:', err);
+    });
+}
+
+function updateNotificationStatus(notificationId, newStatus) {
+    dbConnection.execute('UPDATE notifications SET status = ? WHERE id = ?', [newStatus, notificationId])
+    .then(() => {
+        console.log('Notification status updated successfully.');
+    })
+    .catch(err => {
+        console.error('Error updating notification status:', err);
+    });
+}
+
+app.get('/admin/a-notifications', ifNotLoggedIn, (req, res) => {
+    const userId = req.session.userID || null;
+
+    if (!userId) {
+        console.error('User ID is undefined.');
+        return res.status(400).send('User ID is undefined.');
+    }
+
+    dbConnection.execute('SELECT * FROM notifications WHERE receiver_id = ? ORDER BY created_at DESC', [userId])
+        .then(([rows]) => {
+            res.render('notifications', {
+                notifications: rows
+            });
+        })
+        .catch(err => {
+            console.error('Error retrieving notifications:', err);
+            res.status(500).send('Error occurred while retrieving notifications.');
         });
 });
 
