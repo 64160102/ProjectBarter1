@@ -116,13 +116,25 @@ document.querySelectorAll('.btn-exchange').forEach(button => {
   button.addEventListener('click', function() {
     const popup = document.getElementById('exchangePopup');
     popup.style.display = 'flex';
+
+    // ดึงชื่อผู้ใช้จาก data-attribute ของปุ่มที่ถูกคลิก
+    const userName = this.getAttribute('data-user-name');
+    
+    // เก็บชื่อผู้ใช้ในป๊อปอัพ (คุณอาจต้องแสดงชื่อผู้ใช้ในป๊อปอัพด้วย)
+    document.getElementById('popupUserName').textContent = userName;
+    
+    // เก็บชื่อผู้ใช้ใน data-attribute ของป๊อปอัพเพื่อใช้งานในภายหลัง
+    popup.setAttribute('data-user-name', userName);
   });
 });
 
 document.getElementById('confirmExchange').addEventListener('click', function() {
+  // ดึงชื่อผู้ใช้จาก data-attribute ของป๊อปอัพ
+  const userName = document.getElementById('exchangePopup').getAttribute('data-user-name');
+
   // สร้างข้อมูลการยืนยันการแลกเปลี่ยน
   const exchangeData = {
-    user_name: ' '
+    user_name: userName
   };
 
   // ส่งข้อมูลการยืนยันการแลกเปลี่ยนไปยังเซิร์ฟเวอร์
