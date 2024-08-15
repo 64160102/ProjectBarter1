@@ -408,18 +408,22 @@ app.post('/confirm-exchange', (req, res) => {
     const exchangeData = req.body;
     console.log('คำร้องแลกเปลี่ยนที่ได้รับ:', exchangeData);
   
-    const sql = `INSERT INTO notifications (user_profile_image, user_name, message, status)
-                 VALUES (?, ?, ?, 'pending')`;
-    const params = ['/images/default-profile.png', exchangeData.user_name, `ต้องการสินค้าของคุณ`];
+    // สมมติว่าข้อมูลโปรไฟล์ของผู้ส่งถูกเก็บใน session
+    const senderProfileImage = req.session.profile_image || '/images/default-profile.png'; // ค่าเริ่มต้น
+    const senderName = req.session.userName;
+
+    const sql = `INSERT INTO notifications (user_profile_image, user_name, message, status, user_id)
+                 VALUES (?, ?, ?, 'pending', ?)`;
+    const params = [senderProfileImage, senderName, `ต้องการสินค้าของคุณ`, exchangeData.user_id];
     db.run(sql, params, function(err) {
       if (err) {
-        return console.error(err.message);
+        console.error(err.message);
         return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการยืนยันการแลกเปลี่ยน' });    
       }
       res.json({ message: 'ยืนยันการแลกเปลี่ยนสำเร็จ', id: this.lastID });
     });
 });
-  
+
 // เส้นทางสำหรับยอมรับการแจ้งเตือน
 app.post('/accept-notification', (req, res) => {
     const notificationId = req.body.id;
@@ -474,8 +478,22 @@ app.get('/notifications', (req, res) => {
     });
   });
 
+// เส้นทางสำหรับแสดงหน้าโปรไฟล์ผู้ใช้
+app.get('/user/:id', (req, res) => {
+    const userId = req.params.id;
+    const sql = `SELECT * FROM users WHERE id = ?`;
 
-
+    db.get(sql, [userId], (err, row) => {
+        if (err) {
+            console.error('เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้:', err);
+            return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้' });
+        }
+        if (!row) {
+            return res.status(404).send('ไม่พบผู้ใช้');
+        }
+        res.render('user-profile', { user: row });
+    });
+});
 
 
 
