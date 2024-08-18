@@ -479,9 +479,11 @@ app.get('/notifications', (req, res) => {
   });
 
 // เส้นทางสำหรับแสดงหน้าโปรไฟล์ผู้ใช้
-app.get('/user/:id', (req, res) => {
+app.get('/user-profile/:id', (req, res) => {
     const userId = req.params.id;
     const sql = `SELECT * FROM users WHERE id = ?`;
+    console.log('เข้าสู่เส้นทาง /user/:id');
+    console.log('User ID:', userId);
 
     db.get(sql, [userId], (err, row) => {
         if (err) {
@@ -489,8 +491,10 @@ app.get('/user/:id', (req, res) => {
             return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้' });
         }
         if (!row) {
+            console.log('ไม่พบผู้ใช้สำหรับ ID:', userId);
             return res.status(404).send('ไม่พบผู้ใช้');
         }
+        console.log('พบข้อมูลผู้ใช้:', row);
         res.render('user-profile', { user: row });
     });
 });

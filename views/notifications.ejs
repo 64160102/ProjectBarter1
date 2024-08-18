@@ -48,12 +48,12 @@
     <div id="notifications">
       <% if (notifications && notifications.length > 0) { %>
         <% notifications.forEach(notification => { %>
-          <div class="notification card mb-3" data-id="<%= notification.id %>">
+          <div class="notification card mb-3" data-id="<%= notification.user_id %>">
             <div class="card-body">
-              <a href="/user/<%= notification.user_id %>">
+              <a href="/user-profile/<%= notification.user_id %>">
                 <img src="<%= notification.user_profile_image %>" alt="Profile Image" class="img-thumbnail" style="width: 50px;">
                 <p><%= notification.user_name %> <%= notification.message %></p>
-              </a>
+              </a>            
               <% if (notification.status === 'pending') { %>
                 <button class="btn btn-success btn-accept">ยอมรับ</button>
                 <button class="btn btn-danger btn-reject">ปฏิเสธ</button>
@@ -75,42 +75,43 @@
   crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
   $(document).ready(function () {
-    $('.btn-accept').click(function() {
-      const notificationId = $(this).closest('.notification').data('id');
-      $.ajax({
-        url: '/accept-notification',
-        type: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify({ id: notificationId }),
-        success: function(response) {
-          console.log('ยอมรับการแจ้งเตือน:', response);
-          const notificationElement = $(`.notification[data-id=${notificationId}]`);
-          notificationElement.find('.btn-accept, .btn-reject').remove();
-          notificationElement.append('<p class="text-success">ได้รับการแลกเปลี่ยนแล้ว</p>');
-        },
-        error: function(error) {
-          console.error('เกิดข้อผิดพลาดในการยอมรับการแจ้งเตือน:', error);
-        }
-      });
-    });
-
-    $('.btn-reject').click(function() {
-      const notificationId = $(this).closest('.notification').data('id');
-      $.ajax({
-        url: '/reject-notification',
-        type: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify({ id: notificationId }),
-        success: function(response) {
-          console.log('ปฏิเสธการแจ้งเตือน:', response);
-          $(`.notification[data-id=${notificationId}]`).remove();
-        },
-        error: function(error) {
-          console.error('เกิดข้อผิดพลาดในการปฏิเสธการแจ้งเตือน:', error);
-        }
-      });
+  $('.btn-accept').click(function() {
+    const notificationId = $(this).closest('.notification').data('id');
+    const notificationElement = $(this).closest('.notification');
+    $.ajax({
+      url: '/accept-notification',
+      type: 'POST',
+      contentType: 'application/json',
+      data: JSON.stringify({ id: notificationId }),
+      success: function(response) {
+        console.log('ยอมรับการแจ้งเตือน:', response);
+        notificationElement.find('.btn-accept, .btn-reject').remove();
+        notificationElement.append('<p class="text-success">ได้รับการแลกเปลี่ยนแล้ว</p>');
+      },
+      error: function(error) {
+        console.error('เกิดข้อผิดพลาดในการยอมรับการแจ้งเตือน:', error);
+      }
     });
   });
+
+  $('.btn-reject').click(function() {
+    const notificationId = $(this).closest('.notification').data('id');
+    const notificationElement = $(this).closest('.notification');
+    $.ajax({
+      url: '/reject-notification',
+      type: 'POST',
+      contentType: 'application/json',
+      data: JSON.stringify({ id: notificationId }),
+      success: function(response) {
+        console.log('ปฏิเสธการแจ้งเตือน:', response);
+        notificationElement.remove();
+      },
+      error: function(error) {
+        console.error('เกิดข้อผิดพลาดในการปฏิเสธการแจ้งเตือน:', error);
+      }
+    });
+  });
+});
 </script>
 
   <script src="https://cdn.jsdelivr.net/npm/gasparesganga-jquery-loading-overlay@2.1.7/dist/loadingoverlay.min.js">
