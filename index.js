@@ -427,8 +427,10 @@ app.post('/confirm-exchange', (req, res) => {
 // เส้นทางสำหรับยอมรับการแจ้งเตือน
 app.post('/accept-notification', (req, res) => {
     const notificationId = req.body.id;
-    const db = new sqlite3.Database(dbPath);
+    console.log('Received notificationId:', notificationId); // Log this to check the value
   
+    const db = new sqlite3.Database(dbPath);
+    
     db.serialize(() => {
       db.run("UPDATE notifications SET status = 'ได้รับการแลกเปลี่ยนแล้ว' WHERE id = ?", [notificationId], function(err) {
         if (err) {
@@ -440,7 +442,7 @@ app.post('/accept-notification', (req, res) => {
         }
       });
     });
-  
+    
     db.close((err) => {
       if (err) {
         console.error('เกิดข้อผิดพลาดในการปิดฐานข้อมูล:', err);
@@ -453,15 +455,25 @@ app.post('/accept-notification', (req, res) => {
   // เส้นทางสำหรับปฏิเสธการแจ้งเตือน
   app.post('/reject-notification', (req, res) => {
     const { id } = req.body;
+    const db = new sqlite3.Database(dbPath);
+
     const sql = `DELETE FROM notifications WHERE id = ?`;
     db.run(sql, [id], function(err) {
-      if (err) {
-        console.error('Error rejecting notification:', err.message);
-        return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการปฏิเสธการแจ้งเตือน' });
-      }
-      res.json({ message: 'การแจ้งเตือนถูกปฏิเสธแล้ว' });
+        if (err) {
+            console.error('Error rejecting notification:', err.message);
+            return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการปฏิเสธการแจ้งเตือน' });
+        }
+        res.json({ message: 'การแจ้งเตือนถูกปฏิเสธแล้ว' });
     });
-  });
+
+    db.close((err) => {
+      if (err) {
+        console.error('เกิดข้อผิดพลาดในการปิดฐานข้อมูล:', err);
+      } else {
+        console.log('ปิดฐานข้อมูลเรียบร้อยแล้ว');
+      }
+    });
+});
 
 // เส้นทางสำหรับแสดงหน้าการแจ้งเตือน
 app.get('/notifications', (req, res) => {
@@ -479,7 +491,7 @@ app.get('/notifications', (req, res) => {
   });
 
 // เส้นทางสำหรับแสดงหน้าโปรไฟล์ผู้ใช้
-app.get('/user-profile/:id', (req, res) => {
+app.get('/user/:id', (req, res) => {
     const userId = req.params.id;
     const sql = `SELECT * FROM users WHERE id = ?`;
     console.log('เข้าสู่เส้นทาง /user/:id');
@@ -495,7 +507,7 @@ app.get('/user-profile/:id', (req, res) => {
             return res.status(404).send('ไม่พบผู้ใช้');
         }
         console.log('พบข้อมูลผู้ใช้:', row);
-        res.render('user-profile', { user: row });
+        res.render('user', { user: row });
     });
 });
 

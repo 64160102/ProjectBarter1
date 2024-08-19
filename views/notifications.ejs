@@ -48,9 +48,9 @@
     <div id="notifications">
       <% if (notifications && notifications.length > 0) { %>
         <% notifications.forEach(notification => { %>
-          <div class="notification card mb-3" data-id="<%= notification.user_id %>">
+          <div class="notification card mb-3" data-id="<%= notification.id %>">
             <div class="card-body">
-              <a href="/user-profile/<%= notification.user_id %>">
+              <a href="/user/<%= notification.id %>">
                 <img src="<%= notification.user_profile_image %>" alt="Profile Image" class="img-thumbnail" style="width: 50px;">
                 <p><%= notification.user_name %> <%= notification.message %></p>
               </a>            
@@ -59,6 +59,8 @@
                 <button class="btn btn-danger btn-reject">ปฏิเสธ</button>
               <% } else if (notification.status === 'ได้รับการแลกเปลี่ยนแล้ว') { %>
                 <p class="text-success">ได้รับการแลกเปลี่ยนแล้ว</p>
+              <% } else if (notification.status === 'ปฏิเสธ') { %>
+                <p class="text-danger">ปฏิเสธแล้ว</p>
               <% } %>
             </div>
           </div>
@@ -76,23 +78,24 @@
 <script>
   $(document).ready(function () {
   $('.btn-accept').click(function() {
-    const notificationId = $(this).closest('.notification').data('id');
-    const notificationElement = $(this).closest('.notification');
-    $.ajax({
-      url: '/accept-notification',
-      type: 'POST',
-      contentType: 'application/json',
-      data: JSON.stringify({ id: notificationId }),
-      success: function(response) {
-        console.log('ยอมรับการแจ้งเตือน:', response);
-        notificationElement.find('.btn-accept, .btn-reject').remove();
-        notificationElement.append('<p class="text-success">ได้รับการแลกเปลี่ยนแล้ว</p>');
-      },
-      error: function(error) {
-        console.error('เกิดข้อผิดพลาดในการยอมรับการแจ้งเตือน:', error);
-      }
-    });
+   const notificationId = $(this).closest('.notification').data('id');
+   console.log(notificationId); // Log this to check the value
+   $.ajax({
+    url: '/accept-notification',
+    type: 'POST',
+    contentType: 'application/json',
+    data: JSON.stringify({ id: notificationId }),
+    success: function(response) {
+      console.log('ยอมรับการแจ้งเตือน:', response);
+      const notificationElement = $(`.notification[data-id=${notificationId}]`);
+      notificationElement.find('.btn-accept, .btn-reject').remove();
+      notificationElement.append('<p class="text-success">ได้รับการแลกเปลี่ยนแล้ว</p>');
+    },
+    error: function(error) {
+      console.error('เกิดข้อผิดพลาดในการยอมรับการแจ้งเตือน:', error);
+    }
   });
+});
 
   $('.btn-reject').click(function() {
     const notificationId = $(this).closest('.notification').data('id');
