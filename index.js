@@ -405,19 +405,19 @@ db.all("PRAGMA table_info(notifications)", (err, columns) => {
 
 // เส้นทางสำหรับยืนยันการแลกเปลี่ยน
 app.post('/confirm-exchange', (req, res) => {
-    const exchangeData = req.body;
-    console.log('คำร้องแลกเปลี่ยนที่ได้รับ:', exchangeData);
+    const { user_name, user_id, user_profile_image } = req.body;
+    console.log('คำร้องแลกเปลี่ยนที่ได้รับ:', req.body);
   
-    // สมมติว่าข้อมูลโปรไฟล์ของผู้ส่งถูกเก็บใน session
+    // สมมติว่าคุณยังคงต้องการใช้โปรไฟล์ของผู้ส่งจาก session
     const senderProfileImage = req.session.profile_image || '/images/default-profile.png'; // ค่าเริ่มต้น
     const senderName = req.session.userName;
 
     const sql = `INSERT INTO notifications (user_profile_image, user_name, message, status, user_id)
                  VALUES (?, ?, ?, 'pending', ?)`;
-    const params = [senderProfileImage, senderName, `ต้องการสินค้าของคุณ`, exchangeData.user_id];
+    const params = [senderProfileImage, senderName, `ต้องการสินค้าของคุณ`, user_id];
     db.run(sql, params, function(err) {
       if (err) {
-        console.error(err.message);
+        console.error('เกิดข้อผิดพลาดในการยืนยันการแลกเปลี่ยน:', err.message);
         return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการยืนยันการแลกเปลี่ยน' });    
       }
       res.json({ message: 'ยืนยันการแลกเปลี่ยนสำเร็จ', id: this.lastID });
@@ -507,7 +507,9 @@ app.get('/user/:id', (req, res) => {
             return res.status(404).send('ไม่พบผู้ใช้');
         }
         console.log('พบข้อมูลผู้ใช้:', row);
-        res.render('user', { user: row });
+        res.render('user', { 
+            name: req.session.userName,
+            user: row });
     });
 });
 

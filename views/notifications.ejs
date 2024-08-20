@@ -50,7 +50,7 @@
         <% notifications.forEach(notification => { %>
           <div class="notification card mb-3" data-id="<%= notification.id %>">
             <div class="card-body">
-              <a href="/user/<%= notification.id %>">
+              <a href="/user/<%= notification.user_id %>">
                 <img src="<%= notification.user_profile_image %>" alt="Profile Image" class="img-thumbnail" style="width: 50px;">
                 <p><%= notification.user_name %> <%= notification.message %></p>
               </a>            

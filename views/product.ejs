@@ -107,8 +107,6 @@
 
   </div>
 </div>
-<!-- ปุ่มยืนยันการแลกเปลี่ยน -->
-<button class="btn btn-primary btn-exchange">ยืนยันการแลกเปลี่ยน</button>
 
 <!-- สคริปป๊อปอัพสำหรับการยืนยันการแลกเปลี่ยน -->
 <script>
@@ -117,24 +115,32 @@ document.querySelectorAll('.btn-exchange').forEach(button => {
     const popup = document.getElementById('exchangePopup');
     popup.style.display = 'flex';
 
-    // ดึงชื่อผู้ใช้จาก data-attribute ของปุ่มที่ถูกคลิก
+    // ดึงข้อมูลจาก data-attribute ของปุ่มที่ถูกคลิก
     const userName = this.getAttribute('data-user-name');
+    const userId = this.getAttribute('data-user-id');
+    const userProfileImage = this.getAttribute('data-user-profile-image');
     
-    // เก็บชื่อผู้ใช้ในป๊อปอัพ (คุณอาจต้องแสดงชื่อผู้ใช้ในป๊อปอัพด้วย)
-    document.getElementById('popupUserName').textContent = userName;
-    
-    // เก็บชื่อผู้ใช้ใน data-attribute ของป๊อปอัพเพื่อใช้งานในภายหลัง
+    // เก็บข้อมูลเหล่านี้ใน data-attribute ของป๊อปอัพเพื่อใช้งานในภายหลัง
     popup.setAttribute('data-user-name', userName);
+    popup.setAttribute('data-user-id', userId);
+    popup.setAttribute('data-user-profile-image', userProfileImage);
+    
+    // แสดงชื่อผู้ใช้ในป๊อปอัพ
+    document.getElementById('popupUserName').textContent = userName;
   });
 });
 
 document.getElementById('confirmExchange').addEventListener('click', function() {
-  // ดึงชื่อผู้ใช้จาก data-attribute ของป๊อปอัพ
+  // ดึงข้อมูลจาก data-attribute ของป๊อปอัพ
   const userName = document.getElementById('exchangePopup').getAttribute('data-user-name');
+  const userId = document.getElementById('exchangePopup').getAttribute('data-user-id');
+  const userProfileImage = document.getElementById('exchangePopup').getAttribute('data-user-profile-image');
 
   // สร้างข้อมูลการยืนยันการแลกเปลี่ยน
   const exchangeData = {
-    user_name: userName
+    user_name: userName,
+    user_id: userId,
+    user_profile_image: userProfileImage
   };
 
   // ส่งข้อมูลการยืนยันการแลกเปลี่ยนไปยังเซิร์ฟเวอร์
@@ -149,7 +155,6 @@ document.getElementById('confirmExchange').addEventListener('click', function() 
   .then(data => {
     console.log('แลกเปลี่ยนยืนยัน:', data);
     document.getElementById('exchangePopup').style.display = 'none';
-    // คุณสามารถเพิ่มการอัพเดทการแจ้งเตือนที่แสดงในหน้านี้ได้ถ้าต้องการ
     location.reload(); // โหลดหน้าเว็บใหม่เพื่ออัพเดทการแจ้งเตือน
   })
   .catch(error => console.error('เกิดข้อผิดพลาด:', error));
