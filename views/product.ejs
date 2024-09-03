@@ -72,7 +72,10 @@
           <% if (name !== product.user_name) { %>
           <button class="btn btn-orange btn-chat" data-product-user="<%= product.user_name %>">แชท</button>
           
-          <button class="btn btn-orange btn-exchange" data-product-user="<%= product.user_name %>">แลกเปลี่ยน</button>
+          <button class="btn btn-orange btn-exchange" 
+          data-product-user="<%= product.user_name %>"  
+          data-user-id="<%= user.id %>" 
+          data-user-profile-image="<%= user.profile_image %>">แลกเปลี่ยน</button>
 
           <% } %>
         </div>
@@ -102,6 +105,7 @@
 <div id="exchangePopup" class="popup" style="display: none;">
   <div class="popup-content">
     <p>คุณต้องการยืนยันการแลกเปลี่ยนหรือไม่?</p>
+    <p>กับ <span id="popupUserName"></span></p>
     <button id="confirmExchange" class="btn btn-success">ยืนยัน</button>
     <button id="cancelExchange" class="btn btn-danger">ยกเลิก</button>
 
@@ -110,61 +114,68 @@
 
 <!-- สคริปป๊อปอัพสำหรับการยืนยันการแลกเปลี่ยน -->
 <script>
-document.querySelectorAll('.btn-exchange').forEach(button => {
+  document.querySelectorAll('.btn-exchange').forEach(button => {
   button.addEventListener('click', function() {
     const popup = document.getElementById('exchangePopup');
     popup.style.display = 'flex';
 
     // ดึงข้อมูลจาก data-attribute ของปุ่มที่ถูกคลิก
-    const userName = this.getAttribute('data-user-name');
+    const userName = this.getAttribute('data-product-user');
     const userId = this.getAttribute('data-user-id');
     const userProfileImage = this.getAttribute('data-user-profile-image');
-    
+
+    // แสดงข้อมูลใน console เพื่อการตรวจสอบ
+    console.log('User Name:', userName);
+    console.log('User ID:', userId);  // ตรวจสอบว่าค่าเป็นค่าที่ถูกต้อง
+    console.log('User Profile Image:', userProfileImage);
+
     // เก็บข้อมูลเหล่านี้ใน data-attribute ของป๊อปอัพเพื่อใช้งานในภายหลัง
     popup.setAttribute('data-user-name', userName);
     popup.setAttribute('data-user-id', userId);
     popup.setAttribute('data-user-profile-image', userProfileImage);
-    
+
     // แสดงชื่อผู้ใช้ในป๊อปอัพ
     document.getElementById('popupUserName').textContent = userName;
   });
-});
-
-document.getElementById('confirmExchange').addEventListener('click', function() {
-  // ดึงข้อมูลจาก data-attribute ของป๊อปอัพ
-  const userName = document.getElementById('exchangePopup').getAttribute('data-user-name');
-  const userId = document.getElementById('exchangePopup').getAttribute('data-user-id');
-  const userProfileImage = document.getElementById('exchangePopup').getAttribute('data-user-profile-image');
-
-  // สร้างข้อมูลการยืนยันการแลกเปลี่ยน
-  const exchangeData = {
-    user_name: userName,
-    user_id: userId,
-    user_profile_image: userProfileImage
-  };
-
-  // ส่งข้อมูลการยืนยันการแลกเปลี่ยนไปยังเซิร์ฟเวอร์
-  fetch('/confirm-exchange', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(exchangeData)
-  })
-  .then(response => response.json())
-  .then(data => {
-    console.log('แลกเปลี่ยนยืนยัน:', data);
+  });
+  
+  document.getElementById('confirmExchange').addEventListener('click', function() {
+    // ดึงข้อมูลจาก data-attribute ของป๊อปอัพ
+    const userName = document.getElementById('exchangePopup').getAttribute('data-user-name');
+    const userId = document.getElementById('exchangePopup').getAttribute('data-user-id');
+    const userProfileImage = document.getElementById('exchangePopup').getAttribute('data-user-profile-image');
+  
+    // สร้างข้อมูลการยืนยันการแลกเปลี่ยน
+    const exchangeData = {
+      user_name: userName,
+      user_id: userId,
+      user_profile_image: userProfileImage
+    };
+  
+    // แสดงข้อมูลใน console เพื่อการตรวจสอบ
+    console.log('ส่งข้อมูล:', exchangeData);
+  
+    // ส่งข้อมูลการยืนยันการแลกเปลี่ยนไปยังเซิร์ฟเวอร์
+    fetch('/confirm-exchange', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(exchangeData)
+    })
+    .then(response => response.json())
+    .then(data => {
+      console.log('แลกเปลี่ยนยืนยัน:', data);
+      document.getElementById('exchangePopup').style.display = 'none';
+      location.reload(); // โหลดหน้าเว็บใหม่เพื่ออัพเดทการแจ้งเตือน
+    })
+    .catch(error => console.error('เกิดข้อผิดพลาด:', error));
+  });
+  
+  document.getElementById('cancelExchange').addEventListener('click', function() {
     document.getElementById('exchangePopup').style.display = 'none';
-    location.reload(); // โหลดหน้าเว็บใหม่เพื่ออัพเดทการแจ้งเตือน
-  })
-  .catch(error => console.error('เกิดข้อผิดพลาด:', error));
-});
-
-document.getElementById('cancelExchange').addEventListener('click', function() {
-  document.getElementById('exchangePopup').style.display = 'none';
-});
+  });
 </script>
-
 
   <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js" integrity="sha384-eMNOMzAplPvK7R5jz9yU8JO6STtUWiK+z3h+Qg6lz9zzTtmIMyn8ln4WllFITEQ/" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js" integrity="sha384-cVKIPhGKt+onT4K+zIJ3zcHPaYUqoVGOiASjFZgOlg/9E+4Pq/U3CZ1p3nE0cvjN" crossorigin="anonymous"></script>

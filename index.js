@@ -407,7 +407,12 @@ db.all("PRAGMA table_info(notifications)", (err, columns) => {
 app.post('/confirm-exchange', (req, res) => {
     const { user_name, user_id, user_profile_image } = req.body;
     console.log('คำร้องแลกเปลี่ยนที่ได้รับ:', req.body);
-  
+
+    // เช็คว่าค่าทั้งหมดที่ได้รับไม่เป็นค่าว่างหรือ null
+    if (!user_name || !user_id || !user_profile_image) {
+        return res.status(400).json({ message: 'ข้อมูลไม่ครบถ้วน' });
+    }
+
     // สมมติว่าคุณยังคงต้องการใช้โปรไฟล์ของผู้ส่งจาก session
     const senderProfileImage = req.session.profile_image || '/images/default-profile.png'; // ค่าเริ่มต้น
     const senderName = req.session.userName;
@@ -416,11 +421,11 @@ app.post('/confirm-exchange', (req, res) => {
                  VALUES (?, ?, ?, 'pending', ?)`;
     const params = [senderProfileImage, senderName, `ต้องการสินค้าของคุณ`, user_id];
     db.run(sql, params, function(err) {
-      if (err) {
-        console.error('เกิดข้อผิดพลาดในการยืนยันการแลกเปลี่ยน:', err.message);
-        return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการยืนยันการแลกเปลี่ยน' });    
-      }
-      res.json({ message: 'ยืนยันการแลกเปลี่ยนสำเร็จ', id: this.lastID });
+        if (err) {
+            console.error('เกิดข้อผิดพลาดในการยืนยันการแลกเปลี่ยน:', err.message);
+            return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการยืนยันการแลกเปลี่ยน' });    
+        }
+        res.json({ message: 'ยืนยันการแลกเปลี่ยนสำเร็จ', id: this.lastID });
     });
 });
 
