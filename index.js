@@ -363,45 +363,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
     console.log('เชื่อมต่อกับฐานข้อมูลเรียบร้อยแล้ว');
   }
 });
-/*
-// ตรวจสอบคอลัมน์ในตาราง notifications
-db.all("PRAGMA table_info(notifications)", (err, columns) => {
-  if (err) {
-    console.error('เกิดข้อผิดพลาดในการตรวจสอบคอลัมน์:', err);
-    return;
-  }
 
-  // ตรวจสอบว่ามีคอลัมน์ user_id หรือไม่
-  const hasUserIdColumn = columns.some(column => column.name === 'user_id');
-  // ตรวจสอบว่ามีคอลัมน์ status หรือไม่
-  const hasStatusColumn = columns.some(column => column.name === 'status');
-
-  // เพิ่มคอลัมน์ user_id หากยังไม่มี
-  if (!hasUserIdColumn) {
-    db.run("ALTER TABLE notifications ADD COLUMN user_id INTEGER", (err) => {
-      if (err) {
-        console.error('เกิดข้อผิดพลาดในการเพิ่มคอลัมน์ user_id:', err);
-      } else {
-        console.log('เพิ่มคอลัมน์ user_id เรียบร้อยแล้ว');
-      }
-    });
-  } else {
-    console.log('คอลัมน์ user_id มีอยู่แล้ว');
-  }
-
-  // เพิ่มคอลัมน์ status หากยังไม่มี
-  if (!hasStatusColumn) {
-    db.run("ALTER TABLE notifications ADD COLUMN status TEXT", (err) => {
-      if (err) {
-        console.error('เกิดข้อผิดพลาดในการเพิ่มคอลัมน์ status:', err);
-      } else {
-        console.log('เพิ่มคอลัมน์ status เรียบร้อยแล้ว');
-      }
-    });
-  } else {
-    console.log('คอลัมน์ status มีอยู่แล้ว');
-  }
-});*/
 
 // เส้นทางสำหรับยืนยันการแลกเปลี่ยน
 app.post('/confirm-exchange', (req, res) => {
@@ -490,7 +452,8 @@ app.get('/notifications', (req, res) => {
       }
       res.render('notifications', {
         name: req.session.userName, // ส่งค่าชื่อผู้ใช้ไปยังหน้า notifications.ejs
-        notifications: rows // ส่งตัวแปร notifications ไปด้วย
+        notifications: rows, // ส่งตัวแปร notifications ไปด้วย
+        userID: req.session.userID // หรือกำหนด userID จาก session
       });
     });
   });

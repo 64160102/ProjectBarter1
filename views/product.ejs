@@ -73,9 +73,11 @@
           <button class="btn btn-orange btn-chat" data-product-user="<%= product.user_name %>">แชท</button>
           
           <button class="btn btn-orange btn-exchange" 
-          data-product-user="<%= product.user_name %>"  
-          data-user-id="<%= user.id %>" 
-          data-user-profile-image="<%= user.profile_image %>">แลกเปลี่ยน</button>
+            data-product-user="<%= product.user_name %>"  
+            data-user-id="<%= user.id %>" 
+            data-user-profile-image="<%= user.profile_image %>">
+            แลกเปลี่ยน
+          </button>
 
           <% } %>
         </div>
@@ -106,8 +108,8 @@
   <div class="popup-content">
     <p>คุณต้องการยืนยันการแลกเปลี่ยนหรือไม่?</p>
     <p>กับ <span id="popupUserName"></span></p>
-    <button id="confirmExchange" class="btn btn-success">ยืนยัน</button>
-    <button id="cancelExchange" class="btn btn-danger">ยกเลิก</button>
+    <button id="confirmExchange" class="btn btn-success" >ยืนยัน</button>
+    <button id="cancelExchange" class="btn btn-danger" >ยกเลิก</button>
 
   </div>
 </div>
@@ -126,7 +128,7 @@
 
     // แสดงข้อมูลใน console เพื่อการตรวจสอบ
     console.log('User Name:', userName);
-    console.log('User ID:', userId);  // ตรวจสอบว่าค่าเป็นค่าที่ถูกต้อง
+    console.log('User ID:', userId ? userId : 'user_id เป็นค่าว่าง!');  // ตรวจสอบว่าค่าเป็นค่าที่ถูกต้อง
     console.log('User Profile Image:', userProfileImage);
 
     // เก็บข้อมูลเหล่านี้ใน data-attribute ของป๊อปอัพเพื่อใช้งานในภายหลัง
@@ -166,6 +168,9 @@
     .then(response => response.json())
     .then(data => {
       console.log('แลกเปลี่ยนยืนยัน:', data);
+      if (data.message === 'ข้อมูลไม่ครบถ้วน') {
+        alert('ข้อมูลไม่ครบถ้วน กรุณาตรวจสอบการส่งข้อมูล');
+      }
       document.getElementById('exchangePopup').style.display = 'none';
       location.reload(); // โหลดหน้าเว็บใหม่เพื่ออัพเดทการแจ้งเตือน
     })
