@@ -370,6 +370,14 @@ app.post('/confirm-exchange', (req, res) => {
     const { user_name, user_id, user_profile_image } = req.body;
     console.log('คำร้องแลกเปลี่ยนที่ได้รับ:', req.body);
 
+    // เพิ่มข้อมูลการแจ้งเตือนใหม่เข้าไปใน array
+  notifications.push({
+    user_profile_image: exchangeData.user_profile_image, 
+    user_name: exchangeData.user_name,
+    message: `ต้องการสินค้าของคุณ`,
+    user_id: exchangeData.user_id // เพิ่ม user_id ที่ถูกต้องจาก session
+  });
+
     // เช็คว่าค่าทั้งหมดที่ได้รับไม่เป็นค่าว่างหรือ null
     if (!user_name || !user_id || !user_profile_image) {
         return res.status(400).json({ message: 'ข้อมูลไม่ครบถ้วน' });

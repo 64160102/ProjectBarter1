@@ -72,12 +72,7 @@
           <% if (name !== product.user_name) { %>
           <button class="btn btn-orange btn-chat" data-product-user="<%= product.user_name %>">แชท</button>
           
-          <button class="btn btn-orange btn-exchange" 
-            data-product-user="<%= product.user_name %>"  
-            data-user-id="<%= user.id %>" 
-            data-user-profile-image="<%= user.profile_image %>">
-            แลกเปลี่ยน
-          </button>
+          <button class="btn btn-orange btn-exchange">แลกเปลี่ยน</button>
 
           <% } %>
         </div>
@@ -121,10 +116,10 @@
     const popup = document.getElementById('exchangePopup');
     popup.style.display = 'flex';
 
-    // ดึงข้อมูลจาก data-attribute ของปุ่มที่ถูกคลิก
-    const userName = this.getAttribute('data-product-user');
-    const userId = this.getAttribute('data-user-id');
-    const userProfileImage = this.getAttribute('data-user-profile-image');
+    // ดึงข้อมูลของผู้ใช้จาก session ที่ล็อกอินอยู่ (แทนที่จะเป็นข้อมูลจากสินค้า)
+    const userName = '<%= session.userName %>';
+    const userId = '<%= session.userId %>';
+    const userProfileImage = '<%= session.profile_image %>';
 
     // แสดงข้อมูลใน console เพื่อการตรวจสอบ
     console.log('User Name:', userName);
