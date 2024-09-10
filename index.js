@@ -878,7 +878,69 @@ io.on('connection', function (socket) {
     });
 });
 
+app.get('/edit-product/:product_id', ifNotLoggedIn, function (req, res) {
+    const productId = req.params.product_id;
+    const query = 'SELECT * FROM products WHERE id = ?';
 
+    dbConnection.execute(query, [productId])
+        .then(([rows]) => {
+            if (rows.length > 0) {
+                const product = rows[0];
+                // ตรวจสอบว่าผู้ใช้เป็นเจ้าของสินค้าหรือไม่
+                if (product.user_id !== req.session.userID) {
+                    return res.status(403).send(`
+                        <html>
+                        <head>
+                            <style>
+                                body {
+                                    display: flex;
+                                    flex-direction: column;
+                                    align-items: center;
+                                    justify-content: center;
+                                    height: 100vh;
+                                    margin: 0;
+                                }
+                                .error-message {
+                                    font-size: 24px;
+                                    color: red;
+                                    font-weight: bold;
+                                    text-align: center;
+                                    margin-bottom: 20px;
+                                }
+                                .back-button {
+                                    display: block;
+                                    width: 200px;
+                                    padding: 10px;
+                                    font-size: 18px;
+                                    text-align: center;
+                                    color: white;
+                                    background-color: blue;
+                                    border: none;
+                                    border-radius: 5px;
+                                    cursor: pointer;
+                                }
+                                .back-button:hover {
+                                    background-color: darkblue;
+                                }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="error-message">คุณไม่มีสิทธิ์ในการแก้ไขผลิตภัณฑ์นี้</div>
+                            <button class="back-button" onclick="window.location.href='/'">กลับไปหน้า Home</button>
+                        </body>
+                        </html>
+                    `);
+                }
+                return res.render('edit-product', { product });
+            } else {
+                return res.status(404).send('ไม่พบผลิตภัณฑ์');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            return res.status(500).send('เกิดข้อผิดพลาดขณะดึงข้อมูลผลิตภัณฑ์');
+        });
+});
 
 // Start server
 server.listen(3000, () => console.log("Server is running..."));
