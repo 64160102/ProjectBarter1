@@ -39,6 +39,8 @@ app.use(cookieSession({
     maxAge: 3600 * 1000  // 1hr
 }));
 
+let notifications = [];
+
 // Set up multer for image uploads
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -218,7 +220,14 @@ app.get('/logout', (req, res) => {
 // Product details page
 app.get('/product/:id', (req, res) => {
     const productId = req.params.id;
+
+    // ตรวจสอบว่าเซสชันมีข้อมูล userID หรือไม่
+    if (!req.session.userID) {
+        return res.status(401).send('Please log in to view this page.');
+    }
+
     const userID = req.session.userID; // ดึง userID จากเซสชัน
+    
     dbConnection.execute("SELECT products.*, users.name AS user_name, users.profile_image FROM products JOIN users ON products.user_id = users.id WHERE products.id = ?", [productId])
         .then(([rows]) => {
             if (rows.length > 0) {
@@ -228,7 +237,11 @@ app.get('/product/:id', (req, res) => {
                     user: {
                         profile_image: rows[0].profile_image // ส่งข้อมูลรูปโปรไฟล์ผู้ใช้ไปที่หน้า product.ejs
                     },
-                    userID: userID // ส่งค่า userID ไปยังหน้า product.ejs
+                    userProfileImage: req.session.profile_image, // รูปโปรไฟล์ผู้ใช้จากเซสชัน
+                    sellerName: rows[0].seller_name, // ชื่อผู้ขายสินค้า
+                    sellerProfileImage: rows[0].seller_profile_image, // รูปโปรไฟล์ผู้ขายสินค้า
+                    session: req.session,  // ส่ง session ไปยัง view
+                    userID: req.session.userID
                 });
             } else {
                 res.status(404).send('Product not found');
@@ -367,6 +380,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
 
 // เส้นทางสำหรับยืนยันการแลกเปลี่ยน
 app.post('/confirm-exchange', (req, res) => {
+    const exchangeData = req.body; // ตรวจสอบว่า exchangeData ถูกประกาศที่นี่
     const { user_name, user_id, user_profile_image } = req.body;
     console.log('คำร้องแลกเปลี่ยนที่ได้รับ:', req.body);
 
