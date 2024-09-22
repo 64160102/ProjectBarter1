@@ -363,7 +363,7 @@ app.post('/settings', ifNotLoggedIn, upload.single('profile_image'), (req, res) 
 
 
   
-
+/*
 const sqlite3 = require('sqlite3').verbose();
 // กำหนด dbPath ให้ชี้ไปยังตำแหน่งที่ตั้งของไฟล์ฐานข้อมูล SQLite
 const dbPath = path.resolve(__dirname, 'notifications');
@@ -375,7 +375,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
   } else {
     console.log('เชื่อมต่อกับฐานข้อมูลเรียบร้อยแล้ว');
   }
-});
+});*/
 
 
 // เส้นทางสำหรับยืนยันการแลกเปลี่ยน
@@ -383,14 +383,6 @@ app.post('/confirm-exchange', (req, res) => {
     const exchangeData = req.body; // ตรวจสอบว่า exchangeData ถูกประกาศที่นี่
     const { user_name, user_id, user_profile_image } = req.body;
     console.log('คำร้องแลกเปลี่ยนที่ได้รับ:', req.body);
-
-    // เพิ่มข้อมูลการแจ้งเตือนใหม่เข้าไปใน array
-  notifications.push({
-    user_profile_image: exchangeData.user_profile_image, 
-    user_name: exchangeData.user_name,
-    message: `ต้องการสินค้าของคุณ`,
-    user_id: exchangeData.user_id // เพิ่ม user_id ที่ถูกต้องจาก session
-  });
 
     // เช็คว่าค่าทั้งหมดที่ได้รับไม่เป็นค่าว่างหรือ null
     if (!user_name || !user_id || !user_profile_image) {
@@ -400,14 +392,16 @@ app.post('/confirm-exchange', (req, res) => {
     // สมมติว่าคุณยังคงต้องการใช้โปรไฟล์ของผู้ส่งจาก session
     const senderProfileImage = req.session.profile_image || '/images/default-profile.png'; // ค่าเริ่มต้น
     const senderName = req.session.userName;
+    const senderId = req.session.userID; // ID ของผู้ส่งที่ดึงมาจาก session
 
-    const sql = `INSERT INTO notifications (user_profile_image, user_name, message, status, user_id)
-                 VALUES (?, ?, ?, 'pending', ?)`;
-    const params = [senderProfileImage, senderName, `ต้องการสินค้าของคุณ`, user_id];
+    const sql = `INSERT INTO notifications (sender_profile_image, sender_name, user_profile_image, user_name, message, status, sender_id, receiver_id, created_at)
+                 VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, CURRENT_TIMESTAMP)`;
+    const params = [senderProfileImage, senderName, user_profile_image, user_name, `ต้องการสินค้าของคุณ`, senderId, user_id];
+    
     db.run(sql, params, function(err) {
         if (err) {
             console.error('เกิดข้อผิดพลาดในการยืนยันการแลกเปลี่ยน:', err.message);
-            return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการยืนยันการแลกเปลี่ยน' });    
+            return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการยืนยันการแลกเปลี่ยน' });
         }
         res.json({ message: 'ยืนยันการแลกเปลี่ยนสำเร็จ', id: this.lastID });
     });
@@ -417,36 +411,36 @@ app.post('/confirm-exchange', (req, res) => {
 app.post('/accept-notification', (req, res) => {
     const notificationId = req.body.id;
     console.log('Received notificationId:', notificationId); // Log this to check the value
-  
+    
     const db = new sqlite3.Database(dbPath);
-    
+
     db.serialize(() => {
-      db.run("UPDATE notifications SET status = 'ได้รับการแลกเปลี่ยนแล้ว' WHERE id = ?", [notificationId], function(err) {
-        if (err) {
-          console.error('เกิดข้อผิดพลาดในการอัพเดตสถานะการแจ้งเตือน:', err);
-          res.status(500).send('เกิดข้อผิดพลาดในการอัพเดตสถานะการแจ้งเตือน');
-        } else {
-          console.log(`การแจ้งเตือน ID ${notificationId} ถูกอัพเดตสถานะเรียบร้อยแล้ว`);
-          res.send('การแจ้งเตือนถูกอัพเดตสถานะเรียบร้อยแล้ว');
-        }
-      });
+        const sql = "UPDATE notifications SET status = 'accepted', updated_at = CURRENT_TIMESTAMP WHERE id = ?";
+        db.run(sql, [notificationId], function(err) {
+            if (err) {
+                console.error('เกิดข้อผิดพลาดในการอัพเดตสถานะการแจ้งเตือน:', err);
+                return res.status(500).send('เกิดข้อผิดพลาดในการอัพเดตสถานะการแจ้งเตือน');
+            }
+            console.log(`การแจ้งเตือน ID ${notificationId} ถูกอัพเดตสถานะเรียบร้อยแล้ว`);
+            res.send('การแจ้งเตือนถูกอัพเดตสถานะเรียบร้อยแล้ว');
+        });
     });
-    
+
     db.close((err) => {
-      if (err) {
-        console.error('เกิดข้อผิดพลาดในการปิดฐานข้อมูล:', err);
-      } else {
-        console.log('ปิดฐานข้อมูลเรียบร้อยแล้ว');
-      }
+        if (err) {
+            console.error('เกิดข้อผิดพลาดในการปิดฐานข้อมูล:', err);
+        } else {
+            console.log('ปิดฐานข้อมูลเรียบร้อยแล้ว');
+        }
     });
-  });  
-  
-  // เส้นทางสำหรับปฏิเสธการแจ้งเตือน
-  app.post('/reject-notification', (req, res) => {
+});
+
+// เส้นทางสำหรับปฏิเสธการแจ้งเตือน
+app.post('/reject-notification', (req, res) => {
     const { id } = req.body;
     const db = new sqlite3.Database(dbPath);
 
-    const sql = `DELETE FROM notifications WHERE id = ?`;
+    const sql = `UPDATE notifications SET status = 'rejected', updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
     db.run(sql, [id], function(err) {
         if (err) {
             console.error('Error rejecting notification:', err.message);
@@ -456,29 +450,38 @@ app.post('/accept-notification', (req, res) => {
     });
 
     db.close((err) => {
-      if (err) {
-        console.error('เกิดข้อผิดพลาดในการปิดฐานข้อมูล:', err);
-      } else {
-        console.log('ปิดฐานข้อมูลเรียบร้อยแล้ว');
-      }
+        if (err) {
+            console.error('เกิดข้อผิดพลาดในการปิดฐานข้อมูล:', err);
+        } else {
+            console.log('ปิดฐานข้อมูลเรียบร้อยแล้ว');
+        }
     });
 });
 
 // เส้นทางสำหรับแสดงหน้าการแจ้งเตือน
 app.get('/notifications', (req, res) => {
-    const sql = `SELECT * FROM notifications`;
-    db.all(sql, [], (err, rows) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการดึงข้อมูลการแจ้งเตือน' });
-      }
-      res.render('notifications', {
-        name: req.session.userName, // ส่งค่าชื่อผู้ใช้ไปยังหน้า notifications.ejs
-        notifications: rows, // ส่งตัวแปร notifications ไปด้วย
-        userID: req.session.userID // หรือกำหนด userID จาก session
-      });
+    const currentUserId = req.session.userID; // ดึง userID จากเซสชัน
+    
+    // ตรวจสอบว่าเซสชันมี userID หรือไม่
+    if (!currentUserId) {
+        return res.status(401).send('Please log in to view your notifications.');
+    }
+
+    // SQL สำหรับดึงข้อมูลการแจ้งเตือนเฉพาะของผู้ใช้ที่ล็อกอิน
+    const sql = `SELECT * FROM notifications WHERE receiver_id = ?`;
+
+    db.all(sql, [currentUserId], (err, rows) => {
+        if (err) {
+            console.error('เกิดข้อผิดพลาดในการดึงข้อมูลการแจ้งเตือน:', err);
+            return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการดึงข้อมูลการแจ้งเตือน' });
+        }
+        res.render('notifications', {
+            name: req.session.userName, // ส่งค่าชื่อผู้ใช้ไปยังหน้า notifications.ejs
+            notifications: rows, // ส่งตัวแปร notifications ไปด้วย
+            userID: req.session.userID // หรือกำหนด userID จาก session
+        });
     });
-  });
+});
 
 // เส้นทางสำหรับแสดงหน้าโปรไฟล์ผู้ใช้
 app.get('/user/:id', (req, res) => {
