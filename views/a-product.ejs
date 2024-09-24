@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= product.name %></title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha384-k6RqeWeci5ZR/Lv4MR0sA0FfDOM7F7HvX+io0M6dR9eE5pAXhTSTsABos4aK/a5h" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" integrity="sha384-jLKHWM6YzI2bF5s5q6rQqDd0DybebseZ74mWxnE4wzTosfn4/J2d2lw6ZQp8qaeG" crossorigin="anonymous">
+  <script src="https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@4.6.1/dist/index.min.js"></script>
+
+  <link rel="stylesheet" href="/css/product.css"> <!-- Link to your set.css file -->
+
+  <link rel="stylesheet" href="https://emoji-button.js.org/styles.css">
+ 
+</head>
+
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="/admin"><img src="/images/Logoo.png" alt="Logo"></a>
+      <div class="collapse navbar-collapse">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item">
+            <a class="nav-link" href="/admin/a-upload">ลงสิ่งของ</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/admin/items">รายการสินค้า</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="notifications">การแจ้งเตือน</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/admin/users">การจัดการผู้ใช้</a>
+          </li>
+        </ul>
+        <span class="navbar-text me-3">
+          <%= name %>
+        </span>
+        <a href="/logout" class="btn btn-danger">Logout</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-5">
+    <div class="row">
+      <div class="col-md-6">
+        <div class="card">
+          <img src="<%= product.image %>" class="card-img-top img-fluid" alt="<%= product.name %>">
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card-body">
+          <h5 class="card-title"><%= product.name %></h5>
+          <br><br><br>
+          <p class="card-textd"><%= product.description %></p>
+          <p class="card-text location-text">Location: <%= product.location %></p>
+          <p class="strong">สถานะ: <%= product.status %></p>
+      
+            <img src="<%= product.profile_image %>" class="card-img-top img-pro" alt="<%= product.profile_image %>">
+        </a>
+        
+        <p class="font-weight-bold text-dark">ลงสินค้าโดย 
+          <a href="/view-user/<%= product.user_id %>"><%= product.user_name %></a>
+      </p>
+      
+
+ <!-- แชท กับ แลกเปลี่ยน -->
+
+          <% if (name !== product.user_name) { %>
+          <button class="btn btn-orange btn-chat" data-product-user="<%= product.user_name %>">แชท</button>
+          
+          <button class="btn btn-orange btn-exchange" data-product-user="<%= product.user_name %>">แลกเปลี่ยน</button>
+
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- รายละเอียดแชท -->
+
+  <div class="chat-window" data-product-user="">
+    <div class="chat-header"> ลงสินค้าโดย <span id="chat-product-user"><%= product.user_name %></span></div>
+    <div class="chat-messages" id="chat-messages"></div>
+    <div class="chat-input">
+        <input type="text" id="chat-input" placeholder="พิมพ์ข้อความของคุณ...">
+        <button id="send-message">ส่ง</button>
+        <label class="camera-icon">
+            📷
+            <input type="file" class="hidden-file-input" accept="image/*" />
+        </label>
+    </div>
+</div>
+
+
+<!-- ป๊อปอัพสำหรับการยืนยันการแลกเปลี่ยน -->
+<div id="exchangePopup" class="popup">
+  <div class="popup-content">
+    <p>คุณต้องการยืนยันการแลกเปลี่ยนหรือไม่?</p>
+    <button id="confirmExchange" class="btn btn-success">ยืนยัน</button>
+    <button id="cancelExchange" class="btn btn-danger">ยกเลิก</button>
+    <input type="hidden" id="productId" value="<%= product.id %>">
+
+  </div>
+</div>
+
+<!--ส่งแจ้ง-->
+
+<script>
+ $('#confirmExchange').click(function() {
+    const exchangeData = {
+        user_name: 'User1', // ค่าที่ต้องการส่งไปกับคำร้อง สามารถเปลี่ยนได้
+        product_id: $('#productId').val()
+    };
+
+    $.ajax({
+        type: 'POST',
+        url: '/confirm-exchange',
+        data: exchangeData,
+        success: function(response) {
+            alert(response.message);
+            window.location.href = '/notifications';
+        },
+        error: function(error) {
+            console.error('Error:', error);
+        }
+    });
+});
+
+</script>
+
+
+<!-- สคริปป๊อปอัพสำหรับการยืนยันการแลกเปลี่ยน -->
+<script>
+
+document.querySelectorAll('.btn-exchange').forEach(button => {
+  button.addEventListener('click', function() {
+    const popup = document.getElementById('exchangePopup');
+    popup.style.display = 'flex';
+  });
+});
+
+document.getElementById('confirmExchange').addEventListener('click', function() {
+  // โค้ดจัดการการยืนยันการแลกเปลี่ยน
+  console.log('แลกเปลี่ยนยืนยัน');
+  document.getElementById('exchangePopup').style.display = 'none';
+});
+
+document.getElementById('cancelExchange').addEventListener('click', function() {
+  document.getElementById('exchangePopup').style.display = 'none';
+});
+
+
+</script>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js" integrity="sha384-eMNOMzAplPvK7R5jz9yU8JO6STtUWiK+z3h+Qg6lz9zzTtmIMyn8ln4WllFITEQ/" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js" integrity="sha384-cVKIPhGKt+onT4K+zIJ3zcHPaYUqoVGOiASjFZgOlg/9E+4Pq/U3CZ1p3nE0cvjN" crossorigin="anonymous"></script>
+  <script src="/socket.io/socket.io.js"></script>
+
+
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const userName = '<%= name %>';
+        const productUser = '<%= product.user_name %>';
+        const userID = '<%= userID %>';
+        const chatButton = document.querySelector('.btn-chat');
+        const chatWindow = document.querySelector('.chat-window');
+        const chatMessages = document.getElementById('chat-messages');
+        const chatInput = document.getElementById('chat-input');
+        const sendMessageButton = document.getElementById('send-message');
+        const fileInput = document.querySelector('.hidden-file-input');
+        const socket = io({
+            query: `userName=${userName}`
+        });
+    
+        chatButton.addEventListener('click', () => {
+            if (chatWindow.style.display === 'flex') {
+                chatWindow.style.display = 'none';
+            } else {
+                chatWindow.style.display = 'flex';
+                chatWindow.dataset.productUser = productUser;
+                fetch(`/chat-history/${productUser}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        chatMessages.innerHTML = '';
+                        data.forEach(msg => {
+                            const messageElement = document.createElement('div');
+                            messageElement.classList.add('chat-message');
+                            if (msg.user_name === userName) {
+                                messageElement.classList.add('user');
+                            } else {
+                                messageElement.classList.add('other');
+                            }
+                            if (msg.image_url) {
+                                const imgElement = document.createElement('img');
+                                imgElement.src = msg.image_url;
+                                imgElement.style.maxWidth = '100%';
+                                messageElement.appendChild(imgElement);
+                            } else {
+                                messageElement.innerHTML = `<strong>${msg.user_name}:</strong> ${msg.message} <br> <small>${msg.time}</small>`;
+                            }
+                            chatMessages.appendChild(messageElement);
+                        });
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                    })
+                    .catch(error => console.error('Error fetching chat history:', error));
+            }
+        });
+    
+        sendMessageButton.addEventListener('click', () => {
+            const message = chatInput.value;
+            if (message.trim() !== '') {
+                socket.emit('chat message', {
+                    message,
+                    user_name: userName,
+                    productUser,
+                    userID: userID
+                });
+                chatInput.value = '';
+            }
+        });
+    
+        fileInput.addEventListener('change', () => {
+            const file = fileInput.files[0];
+            if (file) {
+                const formData = new FormData();
+                formData.append('image', file);
+    
+                fetch('/upload-image', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        socket.emit('chat image', {
+                            imageUrl: data.url,
+                            user_name: userName,
+                            productUser,
+                            userID: userID
+                        });
+                    }
+                })
+                .catch(error => console.error('Error uploading image:', error));
+            }
+        });
+    
+        socket.on('chat message', (msg) => {
+    if ((msg.user_name === userName && msg.product_user === productUser) || (msg.user_name === productUser && msg.product_user === userName)) {
+        displayMessage(msg);
+    }
+});
+
+socket.on('chat image', (msg) => {
+    if ((msg.user_name === userName && msg.product_user === productUser) || (msg.user_name === productUser && msg.product_user === userName)) {
+        displayImageMessage(msg);
+    }
+});
+
+function displayMessage(msg) {
+    const messageElement = document.createElement('div');
+    messageElement.classList.add('chat-message');
+    messageElement.classList.add(msg.user_name === userName ? 'user' : 'other');
+    messageElement.innerHTML = `<strong>${msg.user_name}:</strong> ${msg.message} <br> <small>${msg.time}</small>`;
+    chatMessages.appendChild(messageElement);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function displayImageMessage(msg) {
+    const messageElement = document.createElement('div');
+    messageElement.classList.add('chat-message');
+    messageElement.classList.add(msg.user_name === userName ? 'user' : 'other');
+    const imgElement = document.createElement('img');
+    imgElement.src = msg.image_url;
+    imgElement.alt = "Chat Image";
+    imgElement.style.maxWidth = '100%';
+    messageElement.appendChild(imgElement);
+    messageElement.innerHTML += `<br><small>${msg.time}</small>`;
+    chatMessages.appendChild(messageElement);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function sendImage(imageFile) {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const maxSize = 500; // กำหนดขนาดสูงสุดที่ต้องการ
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+                if (width > maxSize) {
+                    height *= maxSize / width;
+                    width = maxSize;
+                }
+            } else {
+                if (height > maxSize) {
+                    width *= maxSize / height;
+                    height = maxSize;
+                }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            const resizedImageData = canvas.toDataURL('image/jpeg', 0.7); // ปรับ quality ของ JPEG ตามต้องการ
+
+            socket.emit('chat image', {
+                user_name: userName,
+                product_user: productUser,
+                image_url: resizedImageData,
+                time: new Date().toLocaleTimeString()
+            });
+        };
+        img.src = event.target.result;
+    };
+    reader.readAsDataURL(imageFile);
+}
+
+document.getElementById('imageInput').addEventListener('change', function(event) {
+    const imageFile = event.target.files[0];
+    sendImage(imageFile);
+  });
+});
+
+
+    
+    
+    
+      </script>
+</body>
+
+</html>

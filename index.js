@@ -135,6 +135,29 @@ app.get('/admin/a-upload', ifNotLoggedIn, (req, res) => {
     });
 });
 
+app.get('/a-product/:id', ifNotLoggedIn, isAdmin, (req, res) => {
+    const productId = req.params.id;
+    const userID = req.session.userID; // ดึง userID จากเซสชัน
+    dbConnection.execute("SELECT products.*, users.name AS user_name, users.profile_image FROM products JOIN users ON products.user_id = users.id WHERE products.id = ?", [productId])
+        .then(([rows]) => {
+            if (rows.length > 0) {
+                res.render('product', {
+                    product: rows[0],
+                    name: req.session.userName, // ส่งค่าชื่อผู้ใช้ไปยังหน้า product.ejs
+                    user: {
+                        profile_image: rows[0].profile_image // ส่งข้อมูลรูปโปรไฟล์ผู้ใช้ไปที่หน้า product.ejs
+                    },
+                    userID: userID // ส่งค่า userID ไปยังหน้า product.ejs
+                });
+            } else {
+                res.status(404).send('Product not found');
+            }
+        }).catch(err => {
+            console.error(err);
+            res.status(500).send('Error occurred while fetching the product.');
+        });
+});
+
 app.post('/a-upload', ifNotLoggedIn, upload.single('product_image'), (req, res) => {
     if (!req.file) {
         return res.render('a-upload', {
