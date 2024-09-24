@@ -61,6 +61,104 @@ const ifLoggedIn = (req, res, next) => {
     next();
 };
 
+const isAdmin = (req, res, next) => {
+    const userId = req.session.userID;
+    dbConnection.execute('SELECT r.role FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = ?', [userId])
+        .then(([rows]) => {
+            if (rows.length > 0 && rows[0].role === 'admin') {
+                next();
+            } else {
+                res.status(403).send('Access denied.');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            res.status(500).send('An error occurred while checking admin privileges.');
+        });
+};
+
+app.get('/admin', ifNotLoggedIn, isAdmin, (req, res) => {
+    res.render('admin', {
+        name: req.session.userName
+    });
+});
+
+// Route for fetching dashboard data
+app.get('/admin/dashboard-data', ifNotLoggedIn, isAdmin, async (req, res) => {
+    try {
+        // Query to get total number of users
+        const [totalUsersRows] = await dbConnection.execute('SELECT COUNT(*) as totalUsers FROM users');
+        const totalUsers = totalUsersRows[0].totalUsers;
+
+        // Query to get total number of exchanged items
+        const [totalExchangedItemsRows] = await dbConnection.execute('SELECT COUNT(*) as totalExchangedItems FROM products WHERE status = "exchange"');
+        const totalExchangedItems = totalExchangedItemsRows[0].totalExchangedItems;
+
+        // Query to get total number of free items
+        const [totalFreeItemsRows] = await dbConnection.execute('SELECT COUNT(*) as totalFreeItems FROM products WHERE status = "free"');
+        const totalFreeItems = totalFreeItemsRows[0].totalFreeItems;
+
+        // Query to get the latest notifications
+        const [latestNotificationsRows] = await dbConnection.execute('SELECT * FROM notifications ORDER BY created_at DESC LIMIT 5');
+        const latestNotifications = latestNotificationsRows.map(row => ({ message: row.message }));
+
+        res.json({
+            totalUsers,
+            totalExchangedItems,
+            totalFreeItems,
+            latestNotifications
+        });
+    } catch (err) {
+        console.error('Error fetching dashboard data:', err);
+        res.status(500).json({ error: 'Error fetching dashboard data' });
+    }
+});
+
+// เส้นทางสำหรับดูรายการสินค้า
+app.get('/admin/items', ifNotLoggedIn, isAdmin, (req, res) => {
+    dbConnection.execute('SELECT * FROM products')
+        .then(([rows]) => {
+            res.render('items', {
+                user: {
+                    name: req.session.userName,
+                    products: rows
+                }
+            });
+        })
+        .catch(err => {
+            console.error(err);
+            res.status(500).send('An error occurred while fetching items.');
+        });
+});
+
+app.get('/admin/a-upload', ifNotLoggedIn, (req, res) => {
+    res.render('a-upload', {
+        name: req.session.userName
+    });
+});
+
+app.post('/a-upload', ifNotLoggedIn, upload.single('product_image'), (req, res) => {
+    if (!req.file) {
+        return res.render('a-upload', {
+            msg: 'Error: No File Selected!',
+            name: req.session.userName
+        });
+    }
+
+    const { product_name, product_description, product_location, product_status } = req.body;
+    const product_image = `/uploads/${req.file.filename}`;
+
+    dbConnection.execute(
+        'INSERT INTO products (name, description, image, location, status, user_id) VALUES (?, ?, ?, ?, ?, ?)',
+        [product_name, product_description, product_image, product_location, product_status, req.session.userID]
+    ).then(result => {
+        res.redirect('/admin/items');
+    }).catch(err => {
+        console.error(err);
+        res.send('Error occurred while uploading the product.');
+    });
+});
+
 // Root page
 app.get('/', ifNotLoggedIn, (req, res) => {
     console.log('User name:', req.session.userName); // Log the username
@@ -165,25 +263,58 @@ app.post('/', ifLoggedIn, [
 
 ], (req, res) => {
     const validation_result = validationResult(req);
-    const { user_pass, user_email } = req.body;
+    const { user_email, user_pass } = req.body;
     if (validation_result.isEmpty()) {
-        dbConnection.execute("SELECT * FROM users WHERE email = ?", [user_email])
+        dbConnection.execute('SELECT * FROM users WHERE email=?', [user_email])
             .then(([rows]) => {
+                if (rows.length === 1) {
+                    const user = rows[0];
 
-                bcrypt.compare(user_pass, rows[0].password).then(compare_result => {
-                    if (compare_result === true) {
-                        req.session.isLoggedIn = true;
-                        req.session.userID = rows[0].id; // Store userID in session
-                        req.session.userName = rows[0].name; // Store username in session
-                        res.redirect('/');
-                    } else {
-                        res.render('login-register', {
-                            login_errors: ['Invalid Password']
+                    // ตรวจสอบสถานะการแบน
+                    if (user.banned) {
+                        return res.render('login-register', {
+                            login_errors: ['Your account has been banned. Please contact support.']
                         });
                     }
-                }).catch(err => {
-                    if (err) throw err;
-                });
+
+                    bcrypt.compare(user_pass, rows[0].password).then(compare_result => {
+                        if (compare_result === true) {
+                            req.session.isLoggedIn = true;
+                            req.session.userID = rows[0].id;
+                            req.session.userName = rows[0].name;
+
+                            // Check the role of the user
+                            dbConnection.execute('SELECT r.role FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = ?', [rows[0].id])
+                                .then(([roleRows]) => {
+                                    if (roleRows.length > 0) {
+                                        req.session.userRole = roleRows[0].role;
+                                        if (roleRows[0].role === 'admin') {
+                                            return res.redirect('/admin');
+                                        } else {
+                                            return res.redirect('/');
+                                        }
+                                    } else {
+                                        req.session.userRole = 'user'; // If no role found, set to user
+                                        return res.redirect('/');
+                                    }
+                                })
+                                .catch(err => {
+                                    console.error(err);
+                                    res.status(500).send('An error occurred while checking user role.');
+                                });
+                        } else {
+                            res.render('login-register', {
+                                login_errors: ['Invalid Password']
+                            });
+                        }
+                    }).catch(err => {
+                        if (err) throw err;
+                    });
+                } else {
+                    res.render('login-register', {
+                        login_errors: ['Invalid Email Address']
+                    });
+                }
             }).catch(err => {
                 if (err) throw err;
             });
@@ -191,7 +322,6 @@ app.post('/', ifLoggedIn, [
         let allErrors = validation_result.errors.map((error) => {
             return error.msg;
         });
-
         res.render('login-register', {
             login_errors: allErrors
         });
@@ -534,6 +664,7 @@ app.get('/view-user/:user_id', ifNotLoggedIn, function (req, res) {
 
 
 
+// Route สำหรับแอดมินแก้ไขผลิตภัณฑ์
 app.get('/edit-product/:product_id', ifNotLoggedIn, function (req, res) {
     const productId = req.params.product_id;
     const query = 'SELECT * FROM products WHERE id = ?';
@@ -542,8 +673,8 @@ app.get('/edit-product/:product_id', ifNotLoggedIn, function (req, res) {
         .then(([rows]) => {
             if (rows.length > 0) {
                 const product = rows[0];
-                // ตรวจสอบว่าผู้ใช้เป็นเจ้าของสินค้าหรือไม่
-                if (product.user_id !== req.session.userID) {
+                // ตรวจสอบ role ของผู้ใช้
+                if (req.session.userRole !== 'admin' && product.user_id !== req.session.userID) {
                     return res.status(403).send(`
                         <html>
                         <head>
@@ -619,7 +750,7 @@ app.post('/edit-product/:product_id', ifNotLoggedIn, upload.single('image'), fun
         .then(([rows]) => {
             if (rows.length > 0) {
                 const product = rows[0];
-                if (product.user_id !== req.session.userID) {
+                if (req.session.userRole !== 'admin' && product.user_id !== req.session.userID) {
                     return res.status(403).send('คุณไม่มีสิทธิ์ในการแก้ไขผลิตภัณฑ์นี้');
                 }
                 // แก้ไขสินค้า โดยตรวจสอบค่า undefined และกำหนดเป็น null ถ้าจำเป็น
@@ -635,7 +766,11 @@ app.post('/edit-product/:product_id', ifNotLoggedIn, upload.single('image'), fun
             }
         })
         .then(() => {
-            res.redirect('/view-user/' + req.session.userID); // เปลี่ยนเส้นทางหลังจากแก้ไขสำเร็จ
+            if (req.session.userRole !== 'admin') {
+                res.redirect('/view-user/' + req.session.userID); // เปลี่ยนเส้นทางไปยังหน้าดูข้อมูลผู้ใช้
+            } else {
+                res.redirect('/admin/items'); // เปลี่ยนเส้นทางไปยังหน้ารายการสินค้าสำหรับแอดมิน
+            }
         })
         .catch(err => {
             console.error(err);
@@ -659,7 +794,7 @@ app.post('/delete-product/:product_id', ifNotLoggedIn, function (req, res) {
         .then(([rows]) => {
             if (rows.length > 0) {
                 const product = rows[0];
-                if (product.user_id !== req.session.userID) {
+                if (req.session.userRole !== 'admin' && product.user_id !== req.session.userID) {
                     return res.status(403).send(`
                         <html>
                         <head>
@@ -751,7 +886,11 @@ app.post('/delete-product/:product_id', ifNotLoggedIn, function (req, res) {
         })
         .then(() => {
             // Redirect หลังจากลบเสร็จ
-            res.redirect('/view-user/' + req.session.userID);
+            if (req.session.userRole !== 'admin') {
+                res.redirect('/view-user/' + req.session.userID); // เปลี่ยนเส้นทางไปยังหน้าดูข้อมูลผู้ใช้
+            } else {
+                res.redirect('/admin/items'); // เปลี่ยนเส้นทางไปยังหน้ารายการสินค้าสำหรับแอดมิน
+            }
         })
         .catch(err => {
             console.error(err);
@@ -830,11 +969,15 @@ app.get('/search', ifNotLoggedIn, (req, res) => {
     
     // ดำเนินการ query ไปที่ฐานข้อมูล
     dbConnection.execute(sql, params).then(([rows]) => {
-         // เมื่อ query เสร็จสิ้น ให้ render หน้า home พร้อมกับผลลัพธ์ของสินค้า
-        res.render('home', {
-            name: req.session.userName,  // ส่งชื่่อผู้ใช้ไปยัง template
-            products: rows   // ส่งผลลัพธ์ของสินค้าไปยัง template
-        });
+        // ตรวจสอบบทบาทของผู้ใช้
+        const userRole = req.session.userRole;
+
+            // ถ้าเป็น user ให้ render หน้า home
+            res.render('home', {
+                name: req.session.userName, // ส่งชื่อผู้ใช้ไปยัง template
+                products: rows // ส่งผลลัพธ์ของสินค้าไปยัง template
+            });
+        
     }).catch(err => {
         console.error(err);
         res.status(500).send('Error occurred while searching for products.');
@@ -842,12 +985,160 @@ app.get('/search', ifNotLoggedIn, (req, res) => {
 });
 
 
+// เส้นทางค้นหาสินค้าสำหรับ admin
+app.get('/admin/search', ifNotLoggedIn, isAdmin, (req, res) => {
+    const query = req.query.query;
+    const status = req.query.status;
 
+    // สร้าง SQL query สำหรับค้นหาสินค้า
+    let sql = "SELECT products.*, users.name AS user_name FROM products JOIN users ON products.user_id = users.id WHERE (products.name LIKE ? OR products.description LIKE ?)";
+    let params = [`%${query}%`, `%${query}%`];
 
+    // ถ้ามีพารามิเตอร์ status เพิ่มเงื่อนไขใน query
+    if (status) {
+        sql += " AND products.status = ?";
+        params.push(status);
+    }
 
+    // ดำเนินการ query ไปที่ฐานข้อมูล
+    dbConnection.execute(sql, params)
+        .then(([rows]) => {
+            res.render('items', {
+                user: {
+                    name: req.session.userName,
+                    products: rows
+                }
+            });
+        })
+        .catch(err => {
+            console.error(err);
+            res.status(500).send('Error occurred while searching for products.');
+        });
+});
 
+// เส้นทางเพื่อแสดงหน้าการจัดการผู้ใช้
+app.get('/admin/users', ifNotLoggedIn, isAdmin, (req, res) => {
+    dbConnection.execute('SELECT users.*, roles.role FROM users LEFT JOIN user_roles ON users.id = user_roles.user_id LEFT JOIN roles ON user_roles.role_id = roles.id')
+        .then(([rows]) => {
+            res.render('users', {
+                users: rows,
+                name: req.session.userName
+            });
+        })
+        .catch(err => {
+            console.error(err);
+            res.status(500).send('เกิดข้อผิดพลาดขณะดึงข้อมูลผู้ใช้');
+        });
+});
 
+// ฟังก์ชันสำหรับอัปเดตบทบาทของผู้ใช้
+function updateUserRole(userId, newRoleId) {
+    dbConnection.execute('SELECT role_id FROM user_roles WHERE user_id = ?', [userId])
+        .then(([rows]) => {
+            if (rows.length > 0 && rows[0].role_id === newRoleId) {
+                console.log('บทบาทที่ต้องการอัปเดตเป็นบทบาทเดิม');
+                return Promise.resolve(); // ไม่จำเป็นต้องทำอะไรเพิ่มเติม
+            } else {
+                return dbConnection.execute('DELETE FROM user_roles WHERE user_id = ?', [userId])
+                    .then(() => {
+                        return dbConnection.execute('INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)', [userId, newRoleId]);
+                    });
+            }
+        })
+        .then(() => {
+            console.log('User role updated successfully.');
+        })
+        .catch(err => {
+            console.error('Error updating user role:', err);
+        });
+}
 
+// เส้นทางเพื่ออัปเดตบทบาทของผู้ใช้
+app.post('/admin/users/:userId/role', ifNotLoggedIn, isAdmin, (req, res) => {
+    const userId = req.params.userId;
+    const newRole = req.body.role;
+    
+    dbConnection.execute('SELECT id FROM roles WHERE role = ?', [newRole])
+        .then(([rows]) => {
+            if (rows.length > 0) {
+                const roleId = rows[0].id;
+                return updateUserRole(userId, roleId);
+            } else {
+                throw new Error('Role not found');
+            }
+        })
+        .then(() => {
+            res.redirect('/admin/users');
+        })
+        .catch(err => {
+            console.error(err);
+            res.status(500).send('เกิดข้อผิดพลาดขณะอัปเดตบทบาทผู้ใช้');
+        });
+});
+
+// เส้นทางเพื่อแบนหรือยกเลิกการแบนผู้ใช้
+app.post('/admin/users/:userId/ban', ifNotLoggedIn, isAdmin, (req, res) => {
+    const userId = req.params.userId;
+    
+    dbConnection.execute('SELECT banned FROM users WHERE id = ?', [userId])
+        .then(([rows]) => {
+            if (rows.length > 0) {
+                const newStatus = !rows[0].banned; // Toggle ban status
+                return dbConnection.execute('UPDATE users SET banned = ? WHERE id = ?', [newStatus, userId]);
+            } else {
+                throw new Error('User not found');
+            }
+        })
+        .then(() => {
+            res.redirect('/admin/users');
+        })
+        .catch(err => {
+            console.error(err);
+            res.status(500).send('เกิดข้อผิดพลาดขณะอัปเดตสถานะผู้ใช้');
+        });
+});
+
+function sendNotification(senderId, receiverId, message) {
+    const status = 'pending'; // สถานะเริ่มต้น
+    dbConnection.execute('INSERT INTO notifications (sender_id, receiver_id, message, status) VALUES (?, ?, ?, ?)', 
+    [senderId, receiverId, message, status])
+    .then(() => {
+        console.log('Notification sent successfully.');
+    })
+    .catch(err => {
+        console.error('Error sending notification:', err);
+    });
+}
+
+function updateNotificationStatus(notificationId, newStatus) {
+    dbConnection.execute('UPDATE notifications SET status = ? WHERE id = ?', [newStatus, notificationId])
+    .then(() => {
+        console.log('Notification status updated successfully.');
+    })
+    .catch(err => {
+        console.error('Error updating notification status:', err);
+    });
+}
+
+app.get('/admin/a-notifications', ifNotLoggedIn, (req, res) => {
+    const userId = req.session.userID || null;
+
+    if (!userId) {
+        console.error('User ID is undefined.');
+        return res.status(400).send('User ID is undefined.');
+    }
+
+    dbConnection.execute('SELECT * FROM notifications WHERE receiver_id = ? ORDER BY created_at DESC', [userId])
+        .then(([rows]) => {
+            res.render('notifications', {
+                notifications: rows
+            });
+        })
+        .catch(err => {
+            console.error('Error retrieving notifications:', err);
+            res.status(500).send('Error occurred while retrieving notifications.');
+        });
+});
 
 io.on('connection', (socket) => {
     console.log('A user connected');
