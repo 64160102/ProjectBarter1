@@ -1,0 +1,389 @@
+.navbar-brand img {
+    height: 100px;
+    /* ปรับความสูงของโลโก้ */
+    width: 250px;
+    /* ให้ความกว้างปรับตามสัดส่วนของโลโก้ */
+  }
+
+  .navbar-nav .nav-link {
+    font-size: 1.5rem;
+    /* ปรับขนาดตัวอักษรใหญ่ขึ้น */
+    margin-left: 2rem;
+    /* ขยับไปทางขวา */
+
+  }
+
+  .navbar-text {
+    font-size: 1.5rem;
+    /* ปรับขนาดตัวอักษรใหญ่ขึ้น */
+
+  }
+
+  .card {
+    height: 100%;
+    /* ให้การ์ดมีความสูงเต็มที่เท่ากัน */
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s;
+    /* เพิ่ม transition */
+  }
+
+  .card:hover {
+    transform: scale(1.05);
+    /* ขยายเมื่อ hover */
+    cursor: pointer;
+    /* เปลี่ยน cursor เป็น pointer */
+  }
+
+  body {
+    background-color: #f0f0f0;
+    /* เปลี่ยนพื้นหลังเป็นสีเทา */
+  }
+
+  .card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .card-title,
+  .card-text {
+    font-family: 'Arial', sans-serif;
+    /* ปรับฟอนต์ */
+  }
+
+  .card-text strong {
+    color: orange;
+    /* สีสถานะเป็นสีส้ม */
+  }
+
+  .card-img-top {
+    object-fit: cover;
+    /* ให้รูปภาพเต็มพื้นที่ */
+    height: 200px;
+    /* ความสูงของรูปภาพ */
+  }
+
+
+  /* === ตกแต่ง Barter ===*/
+
+
+  .button {
+    margin: 0;
+    height: auto;
+    background: transparent;
+    padding: 0;
+    border: none;
+    cursor: pointer;
+  }
+
+  /* button styling */
+  .button {
+    --border-right: 6px;
+    --text-stroke-color: rgba(255, 255, 255, 0.808);
+    --animation-color: #ffde22;
+    --fs-size: 2em;
+    letter-spacing: 3px;
+    text-decoration: none;
+    font-size: var(--fs-size);
+    font-family: "Arial";
+    position: relative;
+    text-transform: uppercase;
+    color: transparent;
+    -webkit-text-stroke: 1px var(--text-stroke-color);
+  }
+
+  /* this is the text, when you hover on button */
+  .hover-text {
+    position: absolute;
+    box-sizing: border-box;
+    content: attr(data-text);
+    color: var(--animation-color);
+    width: 0%;
+    inset: 0;
+    border-right: var(--border-right) solid var(--animation-color);
+    overflow: hidden;
+    transition: 0.5s;
+    -webkit-text-stroke: 1px var(--animation-color);
+  }
+
+  .button:hover .hover-text {
+    width: 100%;
+    filter: drop-shadow(0 0 23px var(--animation-color))
+  }
+
+  /* === สำหรับ carousel === */
+  .carousel {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    /* ให้รูปอยู่ด้านบน */
+    height: 300px;
+    /* ความสูงของพื้นที่ carousel */
+    margin-bottom: 20px;
+  }
+
+  #productImage {
+    max-width: 120%;
+    max-height: 120%;
+    object-fit: contain;
+    /* ให้รูปภาพอยู่ภายในพื้นที่ที่กำหนด */
+  }
+
+
+  @keyframes typewriter {
+  0% {
+      width: 0;
+  }
+  100% {
+      width: 100%;
+  }
+}
+
+@keyframes blink {
+  0%,
+  100% {
+      border-color: transparent;
+  }
+  50% {
+      border-color: black;
+  }
+}
+
+.loader {
+  position: relative;
+  overflow: hidden;
+  border-right: 3px solid #ffb700; /* ปรับสีของเส้นขอบทางขวาของ loader เป็นสีที่คุณต้องการ */
+  width: 200%; /* ปรับความกว้างของ loader */
+  max-width: 430px; /* ความกว้างสูงสุดของ loader */
+  margin: 0 auto; /* จัดกึ่งกลาง */
+  white-space: nowrap; /* ห้ามข้อความขึ้นบรรทัดใหม่ */
+  animation: typewriter 4s steps(40) infinite alternate, blink 0.5s steps(40) infinite;
+}
+
+  .new {
+    background: linear-gradient(to right, #B8860B, #BDB76B);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-align: center;
+      font-size: 36px; /* ปรับขนาดตัวหนังสือใหญ่ขึ้น */
+      font-weight: bold; /* กำหนดความหนาของตัวหนังสือ */
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3); /* เพิ่มเอฟเฟกต์เงาให้กับตัวหนังสือ */
+  }
+
+  .product {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    width: 250px;
+    /* ปรับความกว้างลง */
+    height: 100px;
+    /* ปรับความยาวลง */
+    color: #fff;
+    transition: 0.5s;
+    cursor: pointer;
+    margin-bottom: -20px;
+    /* เพิ่มขยับลงล่าง */
+    margin-left: 580px;
+    /* เพิ่มขยับไปทางขวา */
+  }
+
+
+
+  .product:hover {
+    transform: translateY(-20px);
+  }
+
+  .product::before {
+    content: '';
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: linear-gradient(45deg, #ffbc00, #d8ac1c);
+    border-radius: 1.2em;
+  }
+
+  .product::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(45deg, #ffbc00, #f7ac23);
+    filter: blur(30px);
+  }
+
+  .product span {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    right: 6px;
+    bottom: 6px;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 2;
+    border-radius: 1em;
+  }
+
+  .product span::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 50%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .product .content {
+    position: relative;
+    z-index: 10;
+    font-weight: 700;
+    font-size: 1.5em;
+    text-align: center;
+  }
+
+
+  /*<!-- search form -->*/
+  .search {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    background-color: #ffffff;
+    /* เปลี่ยนเป็นสีขาว */
+  }
+
+  .search .logo {
+    max-width: 200px;
+    /* Adjust this value as needed */
+    height: auto;
+    margin-right: 20px;
+    /* Space between image and form */
+  }
+
+  .search form {
+    display: flex;
+    flex-grow: 1;
+  }
+
+  .search input[type="text"] {
+    flex-grow: 1;
+    padding: 0.5rem;
+    font-size: 1.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+
+  .search button {
+    margin-left: 1rem;
+    padding: 0.5rem 1rem;
+    font-size: 1.5rem;
+    background-color: #DC5F00;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .search button:hover {
+    background-color: #686D76;
+  }
+
+  .bodyproduct {
+    background-color: #ffffff;
+
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    /* เพิ่มเงาเพื่อให้ดูมีมิติ */
+    border-radius: 8px;
+    /* เพิ่มขอบมน */
+    padding: 20px;
+    /* เพิ่มการเว้นระยะใน */
+  
+  }
+
+  .productdetail {
+    background-color: #ffffff;
+    /* เปลี่ยนเป็นสีขาว */
+  }
+
+
+  /* ฟ้อน */
+
+  /* สไตล์ของ h1 (Welcome message) */
+h1 {
+    font-family: 'Arial', sans-serif;
+    font-size: 3rem;
+    color: #ffbc00;
+    text-align: center;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3); /* เพิ่มเงา */
+    margin-bottom: 2rem;
+}
+
+/* ตกแต่งส่วนแดชบอร์ด */
+.dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    padding: 2rem;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-item {
+    background-color: #ffffff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    transition: transform 0.3s ease;
+}
+
+.dashboard-item:hover {
+    transform: scale(1.05); /* ขยายเมื่อ hover */
+}
+
+.dashboard-item h2 {
+    font-family: 'Arial', sans-serif;
+    font-size: 1.8rem;
+    color: #dc5f00;
+    margin-bottom: 1rem;
+}
+
+.dashboard-item p, .dashboard-item ul {
+    font-family: 'Arial', sans-serif;
+    font-size: 1.2rem;
+    color: #686D76;
+    margin-top: 1rem;
+}
+
+/* Loading effect */
+#total-users, #total-exchanged-items, #total-free-items, #latest-notifications li {
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+/* Style the ul list (for latest notifications) */
+#latest-notifications {
+    list-style: none;
+    padding-left: 0;
+}
+
+#latest-notifications li {
+    background-color: #ffde22;
+    padding: 0.5rem;
+    margin: 0.5rem 0;
+    border-radius: 4px;
+    color: #ffffff;
+    font-weight: bold;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+}
