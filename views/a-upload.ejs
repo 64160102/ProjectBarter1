@@ -17,38 +17,30 @@
 
 <body>
 
-  <nav class="navbar navbar-expand-lg navbar-dark">
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container-fluid">
-      <a class="navbar-brand" href="/"><img src="/images/Logoo.png" alt="Logo"></a>
+      <a class="navbar-brand" href="/admin"><img src="/images/Logoo.png" alt="Logo"></a>
       <div class="collapse navbar-collapse">
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
           <li class="nav-item">
-            <a class="nav-link" href="/upload">ลงสิ่งของ</a>
+            <a class="nav-link" href="/admin/a-upload">ลงสิ่งของ</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="/save-offer">บันทึกข้อเสนอ</a>
+            <a class="nav-link" href="/admin/items">รายการสินค้า</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="/notifications">การแจ้งเตือน</a>
+            <a class="nav-link" href="notifications">การแจ้งเตือน</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="/settings">การตั้งค่าโปรไฟล์</a>
+            <a class="nav-link" href="/admin/users">การจัดการผู้ใช้</a>
           </li>
         </ul>
-        <ul class="navbar-nav ml-auto">
-          <span class="navbar-text">
-            <%= name %>
-          </span>
-
-
-
-          <li class="nav-item">
-            <a href="/logout" class="btn btn-danger">Logout</a>
-          </li>
-        </ul>
+        <span class="navbar-text me-3">
+          <%= name %>
+        </span>
+        <a href="/logout" class="btn btn-danger">Logout</a>
       </div>
     </div>
-
   </nav>
 
 
@@ -56,7 +48,7 @@
 
   <div class="container mt-5">
     <h1 class="text-center mb-4">อัพโหลดสินค้า</h1>
-    <form action="/upload" method="POST" enctype="multipart/form-data">
+    <form action="/a-upload" method="POST" enctype="multipart/form-data">
       <div class="form-group">
         <label for="product_name">ชื่อสินค้า (จำเป็น):</label>
         <input type="text" class="form-control" id="product_name" name="product_name" required>
