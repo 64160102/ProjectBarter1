@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload Product</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+  <link rel="stylesheet" href="/css/upload.css"> <!-- Link to your set.css file -->
+  <style>
+    
+  </style>
+</head>
+
+<body>
+
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="/admin"><img src="/images/Logoo.png" alt="Logo"></a>
+      <div class="collapse navbar-collapse">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <li class="nav-item">
+            <a class="nav-link" href="/admin/a-upload">ลงสิ่งของ</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/admin/items">รายการสินค้า</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="notifications">การแจ้งเตือน</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/admin/users">การจัดการผู้ใช้</a>
+          </li>
+        </ul>
+        <span class="navbar-text me-3">
+          <%= name %>
+        </span>
+        <a href="/logout" class="btn btn-danger">Logout</a>
+      </div>
+    </div>
+  </nav>
+
+
+
+
+  <div class="container mt-5">
+    <h1 class="text-center mb-4">อัพโหลดสินค้า</h1>
+    <form action="/a-upload" method="POST" enctype="multipart/form-data">
+      <div class="form-group">
+        <label for="product_name">ชื่อสินค้า (จำเป็น):</label>
+        <input type="text" class="form-control" id="product_name" name="product_name" required>
+      </div>
+      <div class="form-group">
+        <label for="product_description">รายละเอียด (จำเป็น):</label>
+        <textarea class="form-control" id="product_description" name="product_description" rows="3" required></textarea>
+      </div>
+      <div class="form-group">
+        <label for="product_image">อัพโหลดรูปภาพ:</label>
+        <input type="file" class="form-control-file" id="product_image" name="product_image" accept="image/*" required>
+      </div>
+      <div class="form-group">
+        <label for="product_location">ที่อยู่:</label>
+        <input type="text" class="form-control" id="product_location" name="product_location" required>
+      </div>
+      <div class="form-group">
+        <label for="product_status">สถานะ:</label>
+        <select class="form-control" id="product_status" name="product_status" required>
+          <option value="">โปรดเลือก</option>
+          <option value="free">Free</option>
+          <option value="exchange">Exchange</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-orange btn-block">อัพโหลดสินค้า</button>
+    </form>
+  </div>
+
+
+
+  <!-- Bootstrap JS, Popper.js, and jQuery -->
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gasparesganga-jquery-loading-overlay@2.1.7/dist/loadingoverlay.min.js">
+  </script>
+  <script>
+    $(document).ready(function() {
+      setTimeout(function() {
+        $('.loader').addClass('hidden'); // เพิ่มคลาส hidden เพื่อซ่อนโลโก้
+        $('.navbar').removeClass('hidden'); // ลบคลาส hidden เพื่อแสดงแถบนำทาง
+      }, 2000); // 3 วินาที (3000 มิลลิวินาที)
+    });
+  </script>
+
+</body>
+
+</html>

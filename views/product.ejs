@@ -72,7 +72,10 @@
           <% if (name !== product.user_name) { %>
           <button class="btn btn-orange btn-chat" data-product-user="<%= product.user_name %>">แชท</button>
           
-          <button class="btn btn-orange btn-exchange" data-product-user="<%= product.user_name %>">แลกเปลี่ยน</button>
+          <button class="btn btn-orange btn-exchange" 
+            data-user-name="<%= session.userName %>"  
+            data-user-id="<%= session.userID %>" 
+            data-user-profile-image="<%= session.profile_image %>">แลกเปลี่ยน</button>
 
           <% } %>
         </div>
@@ -86,89 +89,108 @@
     <div class="chat-header"> ลงสินค้าโดย <span id="chat-product-user"><%= product.user_name %></span></div>
     <div class="chat-messages" id="chat-messages"></div>
     <div class="chat-input">
-        <input type="text" id="chat-input" placeholder="พิมพ์ข้อความของคุณ...">
-        <button id="send-message">ส่ง</button>
-        <label class="camera-icon">
-            📷
-            <input type="file" class="hidden-file-input" accept="image/*" />
-        </label>
+      <input type="text" id="chat-input" placeholder="พิมพ์ข้อความของคุณ...">
+      <button id="send-message">ส่ง</button>
+ 
+      <label class="camera-icon">
+        📷
+        <input type="file" class="hidden-file-input" accept="image/*" />
+    </label>
+    
     </div>
-</div>
+  </div>
 
 
 <!-- ป๊อปอัพสำหรับการยืนยันการแลกเปลี่ยน -->
 <div id="exchangePopup" class="popup" style="display: none;">
   <div class="popup-content">
     <p>คุณต้องการยืนยันการแลกเปลี่ยนหรือไม่?</p>
-    <p id="popupUserName" style="display:none;"></p> <!-- ซ่อนค่า user_name -->
-    <p id="popupUserId" style="display:none;"></p> <!-- ซ่อนค่า user_id -->
-    <button id="confirmExchange" class="btn btn-success">ยืนยัน</button>
-    <button id="cancelExchange" class="btn btn-danger">ยกเลิก</button>
+    <p>กับ <span id="popupUserName"></span></p>
+    <button id="confirmExchange" class="btn btn-success" >ยืนยัน</button>
+    <button id="cancelExchange" class="btn btn-danger" >ยกเลิก</button>
+
   </div>
 </div>
 
 <!-- สคริปป๊อปอัพสำหรับการยืนยันการแลกเปลี่ยน -->
 <script>
-  
   document.querySelectorAll('.btn-exchange').forEach(button => {
-    button.addEventListener('click', function() {
-      console.log('Exchange button clicked'); // ตรวจสอบการคลิก
-      const popup = document.getElementById('exchangePopup');
-      const userName = this.getAttribute('data-user-name');
-      const userId = this.getAttribute('data-user-id');
-      console.log('UserName:', userName); // ตรวจสอบค่า userName
-      console.log('UserId:', userId); // ตรวจสอบค่า userId
-      popup.querySelector('#popupUserName').innerText = userName;
-      popup.querySelector('#popupUserId').innerText = userId;
-      popup.style.display = 'flex'; // แสดงป๊อปอัพ
-    });
+  button.addEventListener('click', function() {
+    const popup = document.getElementById('exchangePopup');
+    popup.style.display = 'flex';
+
+    // ดึงข้อมูลจาก data-attribute ของปุ่มที่ถูกคลิก (ซึ่งเป็นข้อมูลของผู้ล็อกอิน)
+    const userName = this.getAttribute('data-user-name');
+    const userId = this.getAttribute('data-user-id');
+    const userProfileImage = this.getAttribute('data-user-profile-image') || '/images/default-profile.png';  // ใช้ค่าดีฟอลต์ถ้าไม่มีภาพโปรไฟล์
+
+    // แสดงข้อมูลใน console เพื่อการตรวจสอบ
+    console.log('User Name:', userName);
+    console.log('User ID:', userId ? userId : 'user_id เป็นค่าว่าง!');  // ตรวจสอบว่าค่าเป็นค่าที่ถูกต้อง
+    console.log('User Profile Image:', userProfileImage);
+
+    // เพิ่มการตรวจสอบค่าที่สำคัญ
+    if (!userId || !userName) {
+      alert('ข้อมูลไม่ครบถ้วน กรุณาตรวจสอบ');
+      return;
+    }
+
+    // เก็บข้อมูลเหล่านี้ใน data-attribute ของป๊อปอัพเพื่อใช้งานในภายหลัง
+    popup.setAttribute('data-user-name', userName);
+    popup.setAttribute('data-user-id', userId);
+    popup.setAttribute('data-user-profile-image', userProfileImage);
+
+    // แสดงชื่อผู้ใช้ในป๊อปอัพ
+    document.getElementById('popupUserName').textContent = userName;
   });
+});
 
-  document.getElementById('confirmExchange').addEventListener('click', function() {
-    // ดึงข้อมูล user_name และ user_id จาก popup
-    console.log('Confirm button clicked');
-    const userName = document.getElementById('popupUserName').innerText;
-    const userId = document.getElementById('popupUserId').innerText;
+document.getElementById('confirmExchange').addEventListener('click', function() {
+  // ดึงข้อมูลจาก data-attribute ของป๊อปอัพ
+  const userName = document.getElementById('exchangePopup').getAttribute('data-user-name');
+  const userId = document.getElementById('exchangePopup').getAttribute('data-user-id');
+  const userProfileImage = document.getElementById('exchangePopup').getAttribute('data-user-profile-image');
 
-    // สร้างข้อมูลการยืนยันการแลกเปลี่ยน
-    const exchangeData = {
-      user_name: userName,
-      user_id: userId
-    };
+  // ตรวจสอบข้อมูลก่อนส่ง
+  if (!userName || !userId) {
+    alert('ข้อมูลไม่ครบถ้วน กรุณาตรวจสอบ');
+    return;
+  }
 
-    // ส่งข้อมูลการยืนยันการแลกเปลี่ยนไปยังเซิร์ฟเวอร์
-    fetch('/confirm-exchange', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(exchangeData)
-    })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error('Network response was not ok ' + response.statusText);
-      }
-      return response.json();
-    })
-    .then(data => { 
-      console.log('แลกเปลี่ยนยืนยัน:', data);
-      document.getElementById('exchangePopup').style.display = 'none';
-      console.log('Reloading page');
-      // คุณสามารถเพิ่มการอัพเดทการแจ้งเตือนที่แสดงในหน้านี้ได้ถ้าต้องการ
-      location.reload(); // โหลดหน้าเว็บใหม่เพื่ออัพเดทการแจ้งเตือน
-    })
-    .catch(error => {
-      console.error('เกิดข้อผิดพลาด:', error);
-      alert('เกิดข้อผิดพลาดในการแลกเปลี่ยน: ' + error.message);
-    });
-  });
+  // สร้างข้อมูลการยืนยันการแลกเปลี่ยน
+  const exchangeData = {
+    user_name: userName,
+    user_id: userId,
+    user_profile_image: userProfileImage
+  };
 
-  document.getElementById('cancelExchange').addEventListener('click', function() {
+  // แสดงข้อมูลใน console เพื่อการตรวจสอบ
+  console.log('ส่งข้อมูล:', exchangeData);
+
+  // ส่งข้อมูลการยืนยันการแลกเปลี่ยนไปยังเซิร์ฟเวอร์
+  fetch('/confirm-exchange', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(exchangeData)
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log('แลกเปลี่ยนยืนยัน:', data);
+    if (data.message === 'ข้อมูลไม่ครบถ้วน') {
+      alert('ข้อมูลไม่ครบถ้วน กรุณาตรวจสอบการส่งข้อมูล');
+    }
     document.getElementById('exchangePopup').style.display = 'none';
-    console.log('Cancel button clicked');
-  });
-</script>
+    location.reload(); // โหลดหน้าเว็บใหม่เพื่ออัพเดทการแจ้งเตือน
+  })
+  .catch(error => console.error('เกิดข้อผิดพลาด:', error));
+});
 
+document.getElementById('cancelExchange').addEventListener('click', function() {
+  document.getElementById('exchangePopup').style.display = 'none';
+});
+</script>
 
   <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js" integrity="sha384-eMNOMzAplPvK7R5jz9yU8JO6STtUWiK+z3h+Qg6lz9zzTtmIMyn8ln4WllFITEQ/" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js" integrity="sha384-cVKIPhGKt+onT4K+zIJ3zcHPaYUqoVGOiASjFZgOlg/9E+4Pq/U3CZ1p3nE0cvjN" crossorigin="anonymous"></script>
