@@ -450,30 +450,35 @@ app.post('/reject-notification', (req, res) => {
 app.get('/notifications', (req, res) => {
     const currentUserId = req.session.userID;
 
-    // ตรวจสอบว่ามีการล็อกอินหรือไม่
     if (!currentUserId) {
         return res.status(401).send('Please log in to view your notifications.');
     }
 
-    const sql = `SELECT * FROM notifications WHERE receiver_id = ?`;
-    
-    // ดึงข้อมูลจากฐานข้อมูล
-    dbConnection.query(sql, [currentUserId], (err, rows) => {
-        if (err) {
+    const notificationsQuery = `SELECT * FROM notifications WHERE receiver_id = ?`;
+
+    // ใช้ Promise ในการจัดการการดึงข้อมูล
+    dbConnection.execute(notificationsQuery, [currentUserId])
+        .then(([notificationRows]) => {
+            if (notificationRows.length > 0) {
+                // เรนเดอร์หน้า notifications พร้อมส่งข้อมูลการแจ้งเตือน
+                res.render('notifications', {
+                    name: req.session.userName,
+                    notifications: notificationRows,
+                    userID: req.session.userID
+                });
+            } else {
+                // ถ้าไม่มีการแจ้งเตือน
+                res.render('notifications', {
+                    name: req.session.userName,
+                    notifications: [],
+                    userID: req.session.userID
+                });
+            }
+        })
+        .catch(err => {
             console.error('เกิดข้อผิดพลาดในการดึงข้อมูลการแจ้งเตือน:', err);
-            return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการดึงข้อมูลการแจ้งเตือน' });
-        }
-
-        // ตรวจสอบว่าได้ข้อมูลจากฐานข้อมูลหรือไม่
-        console.log('ข้อมูลการแจ้งเตือนที่ดึงได้:', rows);
-
-        // แสดงผลไปที่หน้า EJS
-        res.render('notifications', {
-            name: req.session.userName,
-            notifications: rows,
-            userID: req.session.userID
+            res.status(500).json({ message: 'เกิดข้อผิดพลาดในการดึงข้อมูลการแจ้งเตือน' });
         });
-    });
 });
 
 // เส้นทางสำหรับแสดงหน้าโปรไฟล์ผู้ใช้
@@ -484,28 +489,30 @@ app.get('/user/:id', (req, res) => {
     console.log('เข้าสู่เส้นทาง /user/:id');
     console.log('User ID:', userId);
 
-    // query ข้อมูลผู้ใช้จาก MySQL
-    dbConnection.query(sql, [userId], (err, results) => {
-        if (err) {
+    // ใช้ execute() แทน query() เพื่อรองรับการใช้ Promise
+    dbConnection.execute(sql, [userId])
+        .then(([results]) => {
+            // ตรวจสอบว่าพบข้อมูลผู้ใช้หรือไม่
+            if (results.length === 0) {
+                console.log('ไม่พบผู้ใช้สำหรับ ID:', userId);
+                return res.status(404).send('ไม่พบผู้ใช้');
+            }
+
+            // ส่งข้อมูลผู้ใช้ไปยัง EJS
+            const user = results[0]; // ดึงผู้ใช้จากผลลัพธ์
+            console.log('พบข้อมูลผู้ใช้:', user);
+
+            // เรนเดอร์หน้า user พร้อมส่งข้อมูลผู้ใช้ไปยัง EJS
+            res.render('user', { 
+                name: req.session.userName,
+                user: user
+            });
+        })
+        .catch(err => {
+            // จัดการข้อผิดพลาดในกรณีที่เกิดปัญหาในการดึงข้อมูลจากฐานข้อมูล
             console.error('เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้:', err);
-            return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้' });
-        }
-
-        // ตรวจสอบว่าพบข้อมูลผู้ใช้หรือไม่
-        if (results.length === 0) {
-            console.log('ไม่พบผู้ใช้สำหรับ ID:', userId);
-            return res.status(404).send('ไม่พบผู้ใช้');
-        }
-
-        // ส่งข้อมูลผู้ใช้ไปยัง EJS
-        const row = results[0]; // ดึงผู้ใช้จากผลลัพธ์
-        console.log('พบข้อมูลผู้ใช้:', row);
-
-        res.render('user', { 
-            name: req.session.userName,
-            user: row
+            res.status(500).json({ message: 'เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้' });
         });
-    });
 });
 
 
