@@ -20,13 +20,7 @@
       <div class="collapse navbar-collapse">
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
           <li class="nav-item">
-            <a class="nav-link" href="/admin/a-upload">ลงสิ่งของ</a>
-          </li>
-          <li class="nav-item">
             <a class="nav-link" href="/admin/items">รายการสินค้า</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="admin/a-notifications">การแจ้งเตือน</a>
           </li>
           <li class="nav-item">
             <a class="nav-link" href="/admin/users">การจัดการผู้ใช้</a>
@@ -42,19 +36,6 @@
 
 <br>
 
-  <!-- Add a search form -->
-  <div class="search">
-    <img src="/images/Logoo2.png" alt="Logo" class="logo">
-    <form action="/search" method="get">
-
-      <input type="text" name="query" placeholder="ค้นหารายการสินค้า">
-      <button type="submit">ค้นหา</button>
-      <button type="submit" name="status" value="free">#Free</button>
-      <button type="submit" name="status" value="exchange">#Exchange</button>
-
-    </form>
-  </div>
-
   <h1>Welcome, <%= name %>!</h1>
     
   <div class="dashboard">
@@ -69,12 +50,6 @@
       <div class="dashboard-item">
           <h2>Total Free Items</h2>
           <p id="total-free-items">Loading...</p>
-      </div>
-      <div class="dashboard-item">
-          <h2>Latest Notifications</h2>
-          <ul id="latest-notifications">
-              <li>Loading...</li>
-          </ul>
       </div>
   </div>
 

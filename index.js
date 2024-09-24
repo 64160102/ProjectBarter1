@@ -474,111 +474,67 @@ app.post('/settings', ifNotLoggedIn, upload.single('profile_image'), (req, res) 
 
 
 
-// การเชื่อมต่อ SQLite งงหนัก
-const sqlite3 = require('sqlite3').verbose();
-const dbPath = path.resolve(__dirname, 'notifications.db');
 
-const sqliteDb = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
-    if (err) {
-        console.error('เกิดข้อผิดพลาดในการเชื่อมต่อกับฐานข้อมูล SQLite:', err);
-    } else {
-        console.log('เชื่อมต่อกับฐานข้อมูล SQLite เรียบร้อยแล้ว');
-    }
-});
-
-// ตรวจสอบและสร้างตารางหากไม่มี
-sqliteDb.serialize(() => {
-    sqliteDb.run(`CREATE TABLE IF NOT EXISTS notifications (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_profile_image TEXT,
-        user_name TEXT,
-        message TEXT,
-        user_id INTEGER,
-        status TEXT
-    )`);
-
-    sqliteDb.run(`CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_name TEXT,
-        user_profile_image TEXT
-    )`);
-});
 
 // เส้นทางสำหรับยืนยันการแลกเปลี่ยน
-app.post('/confirm-exchange', async (req, res) => {
-    const user_profile_image = req.body.user_profile_image || '/images/default-profile.png';
-    const user_name = req.body.user_name || 'Unknown';
-    const message = req.body.message || 'No message';
-    const user_id = req.body.user_id !== undefined ? req.body.user_id : null;
+app.post('/confirm-exchange', (req, res) => {
+    const { user_name, user_id, user_profile_image } = req.body;
+    console.log('คำร้องแลกเปลี่ยนที่ได้รับ:', req.body);
 
-    // ตรวจสอบข้อมูลที่สำคัญ
-    if (user_name === undefined || user_id === undefined) {
-        return res.status(400).json({ error: 'Invalid data' });
+    // ตรวจสอบข้อมูล
+    if (!user_name || !user_id || !user_profile_image) {
+        return res.status(400).json({ message: 'ข้อมูลไม่ครบถ้วน' });
     }
 
-    // คำสั่ง SQL และพารามิเตอร์
-    const sql = 'INSERT INTO notifications (user_profile_image, user_name, message, user_id) VALUES (?, ?, ?, ?)';
-    const params = [user_profile_image, user_name, message, user_id];
+    // ดึงข้อมูลจาก session
+    const senderProfileImage = req.session.profile_image || '/images/default-profile.png';
+    const senderName = req.session.userName;
+    const senderId = req.session.userID;
 
-    try {
-        // ดำเนินการคำสั่ง SQL
-        const [result] = await dbConnection.execute(sql, params);
-        console.log('Notification saved successfully:', result);
+    // SQL ในการเพิ่มการแจ้งเตือนใหม่
+    const sql = `INSERT INTO notifications (sender_profile_image, sender_name, user_profile_image, user_name, message, status, sender_id, receiver_id, created_at)
+                 VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, NOW())`;
 
-        // ส่งการแจ้งเตือนไปยังผู้ใช้
-        io.emit('exchange-confirmed', { user_name, user_id });
-        return res.json({ message: 'Exchange confirmed' });
-    } catch (err) {
-        console.error('Error saving notification:', err.message);
-        return res.status(500).json({ error: 'Failed to save notification' });
-    }
+    // ข้อมูลที่จะถูกใช้ใน query
+    const params = [senderProfileImage, senderName, user_profile_image, user_name, 'ต้องการสินค้าของคุณ', senderId, user_id];
+
+    // query ไปยัง MySQL
+    dbConnection.query(sql, params, (err, result) => {
+        if (err) {
+            console.error('เกิดข้อผิดพลาดในการยืนยันการแลกเปลี่ยน:', err.message);
+            return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการยืนยันการแลกเปลี่ยน' });
+        }
+
+        // ส่งผลลัพธ์กลับ
+        res.json({ message: 'ยืนยันการแลกเปลี่ยนสำเร็จ', id: result.insertId });
+    });
 });
-
-
 
 // เส้นทางสำหรับยอมรับการแจ้งเตือน
 app.post('/accept-notification', (req, res) => {
     const notificationId = req.body.id;
+    console.log('Received notificationId:', notificationId);
 
-    if (notificationId === undefined) {
-        return res.status(400).json({ error: 'Invalid data' });
-    }
+    // SQL สำหรับอัพเดตสถานะเป็น 'accepted'
+    const sql = "UPDATE notifications SET status = 'accepted', updated_at = NOW() WHERE id = ?";
 
-    dbConnection.execute("UPDATE notifications SET status = 'ได้รับการแลกเปลี่ยนแล้ว' WHERE id = ?", [notificationId])
-        .then(() => {
-            console.log(`การแจ้งเตือน ID ${notificationId} ถูกอัพเดตสถานะเรียบร้อยแล้ว`);
-            res.send('การแจ้งเตือนถูกอัพเดตสถานะเรียบร้อยแล้ว');
-        })
-        .catch(err => {
+    dbConnection.query(sql, [notificationId], (err, result) => {
+        if (err) {
             console.error('เกิดข้อผิดพลาดในการอัพเดตสถานะการแจ้งเตือน:', err);
-            res.status(500).send('เกิดข้อผิดพลาดในการอัพเดตสถานะการแจ้งเตือน');
-        });
+            return res.status(500).send('เกิดข้อผิดพลาดในการอัพเดตสถานะการแจ้งเตือน');
+        }
+        res.send('การแจ้งเตือนถูกอัพเดตสถานะเรียบร้อยแล้ว');
+    });
 });
-
-app.post('/reject-notification', (req, res) => {
-    const { id } = req.body;
-
-    if (id === undefined) {
-        return res.status(400).json({ error: 'Invalid data' });
-    }
-
-    dbConnection.execute(`DELETE FROM notifications WHERE id = ?`, [id])
-        .then(() => {
-            res.json({ message: 'การแจ้งเตือนถูกปฏิเสธแล้ว' });
-        })
-        .catch(err => {
-            console.error('Error rejecting notification:', err.message);
-            res.status(500).json({ message: 'เกิดข้อผิดพลาดในการปฏิเสธการแจ้งเตือน' });
-        });
-});
-
 
 // เส้นทางสำหรับปฏิเสธการแจ้งเตือน
 app.post('/reject-notification', (req, res) => {
     const { id } = req.body;
-    const sql = `DELETE FROM notifications WHERE id = ?`;
 
-    sqliteDb.run(sql, [id], function(err) {
+    // SQL สำหรับอัพเดตสถานะเป็น 'rejected'
+    const sql = `UPDATE notifications SET status = 'rejected', updated_at = NOW() WHERE id = ?`;
+
+    dbConnection.query(sql, [id], function(err, result) {
         if (err) {
             console.error('Error rejecting notification:', err.message);
             return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการปฏิเสธการแจ้งเตือน' });
@@ -587,27 +543,75 @@ app.post('/reject-notification', (req, res) => {
     });
 });
 
+
 // เส้นทางสำหรับแสดงหน้าการแจ้งเตือน
 app.get('/notifications', (req, res) => {
-    const sql = `SELECT notifications.*, users.user_profile_image, users.user_name
-                FROM notifications
-                JOIN users ON notifications.user_id = users.id`;
+    const currentUserId = req.session.userID;
 
-    sqliteDb.all(sql, [], (err, rows) => {
-        if (err) {
+    if (!currentUserId) {
+        return res.status(401).send('Please log in to view your notifications.');
+    }
+
+    const notificationsQuery = `SELECT * FROM notifications WHERE receiver_id = ?`;
+
+    // ใช้ Promise ในการจัดการการดึงข้อมูล
+    dbConnection.execute(notificationsQuery, [currentUserId])
+        .then(([notificationRows]) => {
+            if (notificationRows.length > 0) {
+                // เรนเดอร์หน้า notifications พร้อมส่งข้อมูลการแจ้งเตือน
+                res.render('notifications', {
+                    name: req.session.userName,
+                    notifications: notificationRows,
+                    userID: req.session.userID
+                });
+            } else {
+                // ถ้าไม่มีการแจ้งเตือน
+                res.render('notifications', {
+                    name: req.session.userName,
+                    notifications: [],
+                    userID: req.session.userID
+                });
+            }
+        })
+        .catch(err => {
             console.error('เกิดข้อผิดพลาดในการดึงข้อมูลการแจ้งเตือน:', err);
-            return res.status(500).json({ message: 'เกิดข้อผิดพลาดในการดึงข้อมูลการแจ้งเตือน' });
-        }
-        console.log('ข้อมูลการแจ้งเตือน:', rows); // เพิ่ม log เพื่อตรวจสอบข้อมูล
-        res.render('notifications', {
-            name: req.session.userName,
-            notifications: rows
+            res.status(500).json({ message: 'เกิดข้อผิดพลาดในการดึงข้อมูลการแจ้งเตือน' });
         });
-    });
 });
 
+// เส้นทางสำหรับแสดงหน้าโปรไฟล์ผู้ใช้
+app.get('/user/:id', (req, res) => {
+    const userId = req.params.id;
+    const sql = `SELECT * FROM users WHERE id = ?`;
 
+    console.log('เข้าสู่เส้นทาง /user/:id');
+    console.log('User ID:', userId);
 
+    // ใช้ execute() แทน query() เพื่อรองรับการใช้ Promise
+    dbConnection.execute(sql, [userId])
+        .then(([results]) => {
+            // ตรวจสอบว่าพบข้อมูลผู้ใช้หรือไม่
+            if (results.length === 0) {
+                console.log('ไม่พบผู้ใช้สำหรับ ID:', userId);
+                return res.status(404).send('ไม่พบผู้ใช้');
+            }
+
+            // ส่งข้อมูลผู้ใช้ไปยัง EJS
+            const user = results[0]; // ดึงผู้ใช้จากผลลัพธ์
+            console.log('พบข้อมูลผู้ใช้:', user);
+
+            // เรนเดอร์หน้า user พร้อมส่งข้อมูลผู้ใช้ไปยัง EJS
+            res.render('user', { 
+                name: req.session.userName,
+                user: user
+            });
+        })
+        .catch(err => {
+            // จัดการข้อผิดพลาดในกรณีที่เกิดปัญหาในการดึงข้อมูลจากฐานข้อมูล
+            console.error('เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้:', err);
+            res.status(500).json({ message: 'เกิดข้อผิดพลาดในการดึงข้อมูลผู้ใช้' });
+        });
+});
 
 
 
@@ -952,32 +956,27 @@ app.post('/delete-product/:product_id', ifNotLoggedIn, function (req, res) {
 // Search products
 
 app.get('/search', ifNotLoggedIn, (req, res) => {
-    const query = req.query.query; // รับค่าค้นหาจากพารามิเตอร์ query ที่ผู้ใช้กรอกในฟอร์ม
-    const status = req.query.status; // รับค่าสถานะ (free หรือ exchange) จากปุ่มกรองที่ผู้ใช้เลือก
+    const query = req.query.query;
+    const status = req.query.status;
 
-    // เริ่มต้น SQL query เพื่อค้นหาสินค้า
     let sql = "SELECT products.*, users.name AS user_name FROM products JOIN users ON products.user_id = users.id WHERE (products.name LIKE ? OR products.description LIKE ?)";
-     // ตั้งค่าพารามิเตอร์สำหรับ SQL query
     let params = [`%${query}%`, `%${query}%`];
 
-
-    // ถ้ามีพารามิเตอร์ status ถูกส่งมาด้วย ให้เพิ่มเงื่อนไขใน SQL query 
     if (status) {
         sql += " AND products.status = ?";
-        params.push(status); // เพิ่มค่าสถานะลงในพารามิเตอร์ของ query
+        params.push(status);
     }
-    
-    // ดำเนินการ query ไปที่ฐานข้อมูล
+
     dbConnection.execute(sql, params).then(([rows]) => {
-        // ตรวจสอบบทบาทของผู้ใช้
         const userRole = req.session.userRole;
 
-            // ถ้าเป็น user ให้ render หน้า home
-            res.render('home', {
-                name: req.session.userName, // ส่งชื่อผู้ใช้ไปยัง template
-                products: rows // ส่งผลลัพธ์ของสินค้าไปยัง template
-            });
-        
+        res.render('home', {
+            name: req.session.userName, // ส่งชื่อผู้ใช้ไปยัง template
+            products: rows, // ส่งผลลัพธ์ของสินค้าไปยัง template
+            sessionUserName: req.session.userName,  // ส่งค่า session userName
+            sessionUserID: req.session.userID,      // ส่งค่า session userID
+            sessionProfileImage: req.session.profile_image // ส่งค่า session profile_image
+        });
     }).catch(err => {
         console.error(err);
         res.status(500).send('Error occurred while searching for products.');
@@ -985,36 +984,37 @@ app.get('/search', ifNotLoggedIn, (req, res) => {
 });
 
 
+
 // เส้นทางค้นหาสินค้าสำหรับ admin
 app.get('/admin/search', ifNotLoggedIn, isAdmin, (req, res) => {
     const query = req.query.query;
     const status = req.query.status;
 
-    // สร้าง SQL query สำหรับค้นหาสินค้า
     let sql = "SELECT products.*, users.name AS user_name FROM products JOIN users ON products.user_id = users.id WHERE (products.name LIKE ? OR products.description LIKE ?)";
     let params = [`%${query}%`, `%${query}%`];
 
-    // ถ้ามีพารามิเตอร์ status เพิ่มเงื่อนไขใน query
     if (status) {
         sql += " AND products.status = ?";
         params.push(status);
     }
 
-    // ดำเนินการ query ไปที่ฐานข้อมูล
-    dbConnection.execute(sql, params)
-        .then(([rows]) => {
-            res.render('items', {
-                user: {
-                    name: req.session.userName,
-                    products: rows
-                }
-            });
-        })
-        .catch(err => {
-            console.error(err);
-            res.status(500).send('Error occurred while searching for products.');
+    dbConnection.execute(sql, params).then(([rows]) => {
+        res.render('items', {
+            user: {
+                name: req.session.userName,
+                products: rows
+            },
+            sessionUserName: req.session.userName,  // ส่งค่า session userName
+            sessionUserID: req.session.userID,      // ส่งค่า session userID
+            sessionProfileImage: req.session.profile_image // ส่งค่า session profile_image
         });
+    }).catch(err => {
+        console.error(err);
+        res.status(500).send('Error occurred while searching for products.');
+    });
 });
+
+
 
 // เส้นทางเพื่อแสดงหน้าการจัดการผู้ใช้
 app.get('/admin/users', ifNotLoggedIn, isAdmin, (req, res) => {
@@ -1139,6 +1139,13 @@ app.get('/admin/a-notifications', ifNotLoggedIn, (req, res) => {
             res.status(500).send('Error occurred while retrieving notifications.');
         });
 });
+
+
+
+
+
+
+
 
 io.on('connection', (socket) => {
     console.log('A user connected');
