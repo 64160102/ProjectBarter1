@@ -478,7 +478,7 @@ app.post('/settings', ifNotLoggedIn, upload.single('profile_image'), (req, res) 
 
 // เส้นทางสำหรับยืนยันการแลกเปลี่ยน
 app.post('/confirm-exchange', (req, res) => {
-    const { user_name, user_id, user_profile_image } = req.body;
+    const { user_name, user_id, user_profile_image } = req.body; 
     console.log('คำร้องแลกเปลี่ยนที่ได้รับ:', req.body);
 
     // ตรวจสอบข้อมูล
@@ -490,6 +490,11 @@ app.post('/confirm-exchange', (req, res) => {
     const senderProfileImage = req.session.profile_image || '/images/default-profile.png';
     const senderName = req.session.userName;
     const senderId = req.session.userID;
+
+    // ตรวจสอบว่าผู้ส่งและผู้รับไม่ใช่คนเดียวกัน
+    if (senderId === user_id) {
+        return res.status(400).json({ message: 'ไม่สามารถส่งคำร้องไปยังตัวเองได้' });
+    }
 
     // SQL ในการเพิ่มการแจ้งเตือนใหม่
     const sql = `INSERT INTO notifications (sender_profile_image, sender_name, user_profile_image, user_name, message, status, sender_id, receiver_id, created_at)
@@ -547,6 +552,7 @@ app.post('/reject-notification', (req, res) => {
 // เส้นทางสำหรับแสดงหน้าการแจ้งเตือน
 app.get('/notifications', (req, res) => {
     const currentUserId = req.session.userID;
+    const senderName = req.session.userName;
 
     if (!currentUserId) {
         return res.status(401).send('Please log in to view your notifications.');
@@ -562,7 +568,8 @@ app.get('/notifications', (req, res) => {
                 res.render('notifications', {
                     name: req.session.userName,
                     notifications: notificationRows,
-                    userID: req.session.userID
+                    userID: req.session.userID,
+                    profile_image: req.session.profile_image
                 });
             } else {
                 // ถ้าไม่มีการแจ้งเตือน
