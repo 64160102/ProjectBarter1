@@ -115,83 +115,78 @@
 <!-- สคริปป๊อปอัพสำหรับการยืนยันการแลกเปลี่ยน -->
 <script> 
   document.querySelectorAll('.btn-exchange').forEach(button => {
-    button.addEventListener('click', function() {
-      const popup = document.getElementById('exchangePopup');
-      popup.style.display = 'flex';
+  button.addEventListener('click', function() {
+    const popup = document.getElementById('exchangePopup');
+    popup.style.display = 'flex';
 
-      // ดึงข้อมูลจาก data-attribute ของปุ่มที่ถูกคลิก (ซึ่งเป็นข้อมูลของผู้ล็อกอิน)
-      const userName = this.getAttribute('data-user-name');
-      const userId = this.getAttribute('data-user-id');
-      const userProfileImage = this.getAttribute('data-user-profile-image') || '/images/default-profile.png';  // ใช้ค่าดีฟอลต์ถ้าไม่มีภาพโปรไฟล์
+    // ดึงข้อมูลจาก data-attribute ของปุ่มที่ถูกคลิก (ซึ่งเป็นข้อมูลของผู้ล็อกอิน)
+    const userName = this.getAttribute('data-user-name');
+    const userId = this.getAttribute('data-user-id');
+    const userProfileImage = this.getAttribute('data-user-profile-image') || '/images/default-profile.png';
 
-      // แสดงข้อมูลใน console เพื่อการตรวจสอบ
-      console.log('User Name:', userName);
-      console.log('User ID:', userId ? userId : 'user_id เป็นค่าว่าง!');  // ตรวจสอบว่าค่าเป็นค่าที่ถูกต้อง
-      console.log('User Profile Image:', userProfileImage);
+    console.log('User Name:', userName);
+    console.log('User ID:', userId);
+    console.log('User Profile Image:', userProfileImage);
 
-      // เพิ่มการตรวจสอบค่าที่สำคัญ
-      if (!userId || !userName) {
-        alert('ข้อมูลไม่ครบถ้วน กรุณาตรวจสอบ');
-        return;
-      }
-
-      // เก็บข้อมูลเหล่านี้ใน data-attribute ของป๊อปอัพเพื่อใช้งานในภายหลัง
-      popup.setAttribute('data-user-name', userName);
-      popup.setAttribute('data-user-id', userId);
-      popup.setAttribute('data-user-profile-image', userProfileImage);
-
-      // แสดงชื่อผู้ใช้ในป๊อปอัพ
-      document.getElementById('popupUserName').textContent = userName;
-    });
-  });
-
-  document.getElementById('confirmExchange').addEventListener('click', function() {
-    // ดึงข้อมูลจาก data-attribute ของป๊อปอัพ
-    const userName = document.getElementById('exchangePopup').getAttribute('data-user-name');
-    const userId = document.getElementById('exchangePopup').getAttribute('data-user-id');
-    const userProfileImage = document.getElementById('exchangePopup').getAttribute('data-user-profile-image');
-
-    // ตรวจสอบข้อมูลก่อนส่ง
-    if (!userName || !userId) {
+    // ตรวจสอบว่าค่าผู้ใช้และ ID มีค่าครบถ้วน
+    if (!userId || !userName) {
       alert('ข้อมูลไม่ครบถ้วน กรุณาตรวจสอบ');
       return;
     }
 
-    // สร้างข้อมูลการยืนยันการแลกเปลี่ยน
-    const exchangeData = {
-      user_name: userName,
-      user_id: userId,
-      user_profile_image: userProfileImage
-    };
+    // เก็บข้อมูลใน popup เพื่อใช้งานในการยืนยัน
+    popup.setAttribute('data-user-name', userName);
+    popup.setAttribute('data-user-id', userId);
+    popup.setAttribute('data-user-profile-image', userProfileImage);
+    document.getElementById('popupUserName').textContent = userName;
+  });
+});
 
-    // แสดงข้อมูลใน console เพื่อการตรวจสอบ
-    console.log('ส่งข้อมูล:', exchangeData);
+document.getElementById('confirmExchange').addEventListener('click', function() {
+  // ดึงข้อมูลจาก popup
+  const userName = document.getElementById('exchangePopup').getAttribute('data-user-name');
+  const userId = document.getElementById('exchangePopup').getAttribute('data-user-id');
+  const userProfileImage = document.getElementById('exchangePopup').getAttribute('data-user-profile-image');
 
-    // ส่งข้อมูลการยืนยันการแลกเปลี่ยนไปยังเซิร์ฟเวอร์
-    fetch('/confirm-exchange', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(exchangeData)
-    })
-    .then(response => response.json())
-    .then(data => {
-      console.log('แลกเปลี่ยนยืนยัน:', data);
-      if (data.message === 'ข้อมูลไม่ครบถ้วน') {
-        alert('ข้อมูลไม่ครบถ้วน กรุณาตรวจสอบการส่งข้อมูล');
-      } else {
-        alert('ยืนยันการแลกเปลี่ยนสำเร็จ!');
-      }
+  // ตรวจสอบว่าข้อมูลมีครบถ้วน
+  if (!userName || !userId) {
+    alert('ข้อมูลไม่ครบถ้วน กรุณาตรวจสอบ');
+    return;
+  }
+
+  // สร้างข้อมูลการแลกเปลี่ยน
+  const exchangeData = {
+    user_name: userName,
+    user_id: userId,
+    user_profile_image: userProfileImage
+  };
+
+  console.log('ส่งข้อมูล:', exchangeData);
+
+  // ส่งข้อมูลไปยัง server
+  fetch('/confirm-exchange', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(exchangeData)
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.message === 'ข้อมูลไม่ครบถ้วน') {
+      alert('ข้อมูลไม่ครบถ้วน กรุณาตรวจสอบการส่งข้อมูล');
+    } else {
+      alert('ยืนยันการแลกเปลี่ยนสำเร็จ!');
       document.getElementById('exchangePopup').style.display = 'none';
-      location.reload(); // โหลดหน้าเว็บใหม่เพื่ออัพเดทการแจ้งเตือน
-    })
-    .catch(error => console.error('เกิดข้อผิดพลาด:', error));
-  });
+      location.reload();
+    }
+  })
+  .catch(error => console.error('เกิดข้อผิดพลาด:', error));
+});
 
-  document.getElementById('cancelExchange').addEventListener('click', function() {
-    document.getElementById('exchangePopup').style.display = 'none';
-  });
+document.getElementById('cancelExchange').addEventListener('click', function() {
+  document.getElementById('exchangePopup').style.display = 'none';
+});
 </script>
 
   <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js" integrity="sha384-eMNOMzAplPvK7R5jz9yU8JO6STtUWiK+z3h+Qg6lz9zzTtmIMyn8ln4WllFITEQ/" crossorigin="anonymous"></script>
