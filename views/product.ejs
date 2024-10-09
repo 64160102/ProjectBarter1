@@ -73,10 +73,9 @@
           <button class="btn btn-orange btn-chat" data-product-user="<%= product.user_name %>">แชท</button>
           
           <button class="btn btn-orange btn-exchange" 
-            data-user-name="<%= name %>"  
-            data-user-id="<%= userID %>" 
-            data-user-profile-image="<%= user.profile_image || '/images/default-profile.png' %>">แลกเปลี่ยน</button>
-
+            data-user-name="<%= product.user_name %>"  
+            data-user-id="<%= product.user_id %>" 
+            data-user-profile-image="<%= product.profile_image || '/images/default-profile.png' %>">แลกเปลี่ยน</button>
           <% } %>
         </div>
       </div>
