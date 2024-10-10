@@ -575,8 +575,7 @@ app.get('/notifications', (req, res) => {
                 res.render('notifications', {
                     name: req.session.userName,
                     notifications: notificationRows,
-                    userID: req.session.userID,
-                    profile_image: req.session.profile_image
+                    userID: req.session.userID
                 });
             } else {
                 // ถ้าไม่มีการแจ้งเตือน
