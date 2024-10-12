@@ -87,6 +87,8 @@
             const notificationElement = $(`.notification[data-id=${notificationId}]`);
             notificationElement.find('.btn-accept, .btn-reject').remove();
             notificationElement.append('<p class="text-success">ได้รับการแลกเปลี่ยนแล้ว</p>');
+            // Reload หน้าหลังจากอัปเดต
+            location.reload();
           },
           error: function(error) {
             console.error('เกิดข้อผิดพลาดในการยอมรับการแจ้งเตือน:', error);

@@ -73,10 +73,9 @@
           <button class="btn btn-orange btn-chat" data-product-user="<%= product.user_name %>">แชท</button>
           
           <button class="btn btn-orange btn-exchange" 
-          data-user-name="<%= name %>"  
-          data-user-id="<%= userID %>" 
-          data-user-profile-image="<%= user.profile_image %>">แลกเปลี่ยน</button>
-
+            data-user-name="<%= product.user_name %>"  
+            data-user-id="<%= product.user_id %>" 
+            data-user-profile-image="<%= product.profile_image || '/images/default-profile.png' %>">แลกเปลี่ยน</button>
           <% } %>
         </div>
       </div>
@@ -113,61 +112,57 @@
 </div>
 
 <!-- สคริปป๊อปอัพสำหรับการยืนยันการแลกเปลี่ยน -->
-<script>
+<script> 
   document.querySelectorAll('.btn-exchange').forEach(button => {
   button.addEventListener('click', function() {
     const popup = document.getElementById('exchangePopup');
     popup.style.display = 'flex';
 
-    // ดึงข้อมูลจาก data-attribute ของปุ่มที่ถูกคลิก (ซึ่งเป็นข้อมูลของผู้ล็อกอิน)
+    // ดึงข้อมูลจาก data-attribute ของปุ่มที่ถูกคลิก
     const userName = this.getAttribute('data-user-name');
     const userId = this.getAttribute('data-user-id');
-    const userProfileImage = this.getAttribute('data-user-profile-image') || '/images/default-profile.png';  // ใช้ค่าดีฟอลต์ถ้าไม่มีภาพโปรไฟล์
+    const userProfileImage = this.getAttribute('data-user-profile-image') || '/images/default-profile.png';
 
-    // แสดงข้อมูลใน console เพื่อการตรวจสอบ
     console.log('User Name:', userName);
-    console.log('User ID:', userId ? userId : 'user_id เป็นค่าว่าง!');  // ตรวจสอบว่าค่าเป็นค่าที่ถูกต้อง
+    console.log('User ID:', userId);
     console.log('User Profile Image:', userProfileImage);
 
-    // เพิ่มการตรวจสอบค่าที่สำคัญ
+    // ตรวจสอบว่าค่าผู้ใช้และ ID มีค่าครบถ้วน
     if (!userId || !userName) {
       alert('ข้อมูลไม่ครบถ้วน กรุณาตรวจสอบ');
       return;
     }
 
-    // เก็บข้อมูลเหล่านี้ใน data-attribute ของป๊อปอัพเพื่อใช้งานในภายหลัง
+    // เก็บข้อมูลใน popup เพื่อใช้งานในการยืนยัน
     popup.setAttribute('data-user-name', userName);
     popup.setAttribute('data-user-id', userId);
     popup.setAttribute('data-user-profile-image', userProfileImage);
-
-    // แสดงชื่อผู้ใช้ในป๊อปอัพ
     document.getElementById('popupUserName').textContent = userName;
   });
 });
 
 document.getElementById('confirmExchange').addEventListener('click', function() {
-  // ดึงข้อมูลจาก data-attribute ของป๊อปอัพ
+  // ดึงข้อมูลจาก popup
   const userName = document.getElementById('exchangePopup').getAttribute('data-user-name');
   const userId = document.getElementById('exchangePopup').getAttribute('data-user-id');
   const userProfileImage = document.getElementById('exchangePopup').getAttribute('data-user-profile-image');
 
-  // ตรวจสอบข้อมูลก่อนส่ง
+  // ตรวจสอบว่าข้อมูลมีครบถ้วน
   if (!userName || !userId) {
     alert('ข้อมูลไม่ครบถ้วน กรุณาตรวจสอบ');
     return;
   }
 
-  // สร้างข้อมูลการยืนยันการแลกเปลี่ยน
+  // สร้างข้อมูลการแลกเปลี่ยน
   const exchangeData = {
     user_name: userName,
     user_id: userId,
     user_profile_image: userProfileImage
   };
 
-  // แสดงข้อมูลใน console เพื่อการตรวจสอบ
   console.log('ส่งข้อมูล:', exchangeData);
 
-  // ส่งข้อมูลการยืนยันการแลกเปลี่ยนไปยังเซิร์ฟเวอร์
+  // ส่งข้อมูลไปยัง server
   fetch('/confirm-exchange', {
     method: 'POST',
     headers: {
@@ -177,12 +172,13 @@ document.getElementById('confirmExchange').addEventListener('click', function() 
   })
   .then(response => response.json())
   .then(data => {
-    console.log('แลกเปลี่ยนยืนยัน:', data);
     if (data.message === 'ข้อมูลไม่ครบถ้วน') {
       alert('ข้อมูลไม่ครบถ้วน กรุณาตรวจสอบการส่งข้อมูล');
+    } else {
+      alert('ยืนยันการแลกเปลี่ยนสำเร็จ!');
+      document.getElementById('exchangePopup').style.display = 'none';
+      location.reload();
     }
-    document.getElementById('exchangePopup').style.display = 'none';
-    location.reload(); // โหลดหน้าเว็บใหม่เพื่ออัพเดทการแจ้งเตือน
   })
   .catch(error => console.error('เกิดข้อผิดพลาด:', error));
 });

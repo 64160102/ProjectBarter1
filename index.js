@@ -479,26 +479,39 @@ app.post('/settings', ifNotLoggedIn, upload.single('profile_image'), (req, res) 
 // เส้นทางสำหรับยืนยันการแลกเปลี่ยน
 app.post('/confirm-exchange', (req, res) => {
     const { user_name, user_id, user_profile_image } = req.body;
-    console.log('คำร้องแลกเปลี่ยนที่ได้รับ:', req.body);
+    console.log('คำร้องแลกเปลี่ยนที่ได้รับจาก client:', req.body);
 
-    // ตรวจสอบข้อมูล
+    // ตรวจสอบข้อมูลที่ส่งมาจาก client ว่าครบถ้วนหรือไม่
     if (!user_name || !user_id || !user_profile_image) {
         return res.status(400).json({ message: 'ข้อมูลไม่ครบถ้วน' });
     }
 
-    // ดึงข้อมูลจาก session
+    // ดึงข้อมูลของผู้ส่งจาก session
     const senderProfileImage = req.session.profile_image || '/images/default-profile.png';
     const senderName = req.session.userName;
     const senderId = req.session.userID;
 
-    // SQL ในการเพิ่มการแจ้งเตือนใหม่
+    // Log ค่า sender และ receiver เพื่อการตรวจสอบเพิ่มเติม
+    console.log('Sender ID จาก session:', senderId);
+    console.log('Receiver ID ที่ถูกส่งจาก client:', user_id);
+
+    // ตรวจสอบว่าผู้ส่งและผู้รับไม่ใช่คนเดียวกัน
+    if (senderId === user_id) {
+        console.log('Error: Sender และ Receiver เป็นคนเดียวกัน!');
+        return res.status(400).json({ message: 'ไม่สามารถส่งคำร้องไปยังตัวเองได้' });
+    }
+
+    // SQL สำหรับการเพิ่มข้อมูลการแจ้งเตือน
     const sql = `INSERT INTO notifications (sender_profile_image, sender_name, user_profile_image, user_name, message, status, sender_id, receiver_id, created_at)
                  VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, NOW())`;
 
-    // ข้อมูลที่จะถูกใช้ใน query
+    // ข้อมูลที่จะถูกใช้ในการ query
     const params = [senderProfileImage, senderName, user_profile_image, user_name, 'ต้องการสินค้าของคุณ', senderId, user_id];
 
-    // query ไปยัง MySQL
+    // Log ค่า params ที่จะถูกใช้ใน query เพื่อการตรวจสอบ
+    console.log('Parameters ที่จะถูกใช้ในการ query:', params);
+
+    // Query ไปยัง MySQL
     dbConnection.query(sql, params, (err, result) => {
         if (err) {
             console.error('เกิดข้อผิดพลาดในการยืนยันการแลกเปลี่ยน:', err.message);
