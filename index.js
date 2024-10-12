@@ -565,7 +565,13 @@ app.get('/notifications', (req, res) => {
         return res.status(401).send('Please log in to view your notifications.');
     }
 
-    const notificationsQuery = `SELECT * FROM notifications WHERE receiver_id = ?`;
+    // ปรับปรุง SQL Query เพื่อ JOIN ตาราง users
+    const notificationsQuery = `
+        SELECT n.*, u.profile_image, u.name AS sender_name 
+        FROM notifications n
+        LEFT JOIN users u ON n.sender_id = u.id
+        WHERE n.receiver_id = ?
+    `;
 
     // ใช้ Promise ในการจัดการการดึงข้อมูล
     dbConnection.execute(notificationsQuery, [currentUserId])
@@ -629,11 +635,30 @@ app.get('/user/:id', (req, res) => {
 
 
 
+// เส้นทางสำหรับลบการแจ้งเตือน
+app.post('/delete-notification', (req, res) => {
+    const notificationId = req.body.id;
 
+    if (!notificationId) {
+        return res.status(400).json({ message: 'ไม่พบ ID ของการแจ้งเตือน' });
+    }
 
+    const deleteNotificationQuery = `DELETE FROM notifications WHERE id = ? AND receiver_id = ?`;
 
-
-
+    // ใช้ Promise ในการจัดการการลบ
+    dbConnection.execute(deleteNotificationQuery, [notificationId, req.session.userID])
+        .then(([result]) => {
+            if (result.affectedRows > 0) {
+                res.status(200).json({ message: 'ลบการแจ้งเตือนเรียบร้อยแล้ว' });
+            } else {
+                res.status(404).json({ message: 'ไม่พบการแจ้งเตือนที่ต้องการลบ' });
+            }
+        })
+        .catch(err => {
+            console.error('เกิดข้อผิดพลาดในการลบการแจ้งเตือน:', err);
+            res.status(500).json({ message: 'เกิดข้อผิดพลาดในการลบการแจ้งเตือน' });
+        });
+});
 
 
 

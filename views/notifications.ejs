@@ -4,9 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
-    integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC"
-    crossorigin="anonymous">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
   <link rel="stylesheet" href="/css/notifications.css">
   <title>การแจ้งเตือน</title>
 </head>
@@ -32,7 +30,7 @@
           </li>
         </ul>
         <span class="navbar-text me-3">
-            <%= name %>
+          <%= name %>
         </span>
         <a href="/logout" class="btn btn-danger">ออกจากระบบ</a>
       </div>
@@ -44,91 +42,134 @@
     <p>ยินดีต้อนรับ, <%= name %></p>
     <div id="notifications">
       <% if (notifications && notifications.length > 0) { %>
-        <% notifications.forEach(notification => { %>
-          <div class="notification card mb-3" data-id="<%= notification.id %>">
-            <div class="card-body">
-              <a href="/user/<%= notification.sender_id %>">
-                <img src="<%= notification.sender_profile_image || '/images/default-profile.png' %>" alt="Profile Image" class="img-thumbnail" style="width: 50px;">
-                <p><%= notification.sender_name %> <%= notification.message %></p>
-              </a>            
-              <% if (notification.status === 'pending') { %>
+      <% notifications.forEach(notification => { %>
+        <div class="notification card mb-3" data-id="<%= notification.id %>">
+          <div class="card-body">
+    <a href="/view-user/<%= notification.sender_id %>"> <!-- เปลี่ยนลิงก์นี้ -->
+  <img src="<%= notification.profile_image || '/images/default-profile.png' %>" alt="Profile Image" class="img-thumbnail" style="width: 50px;">
+  <p><%= notification.sender_name %> <%= notification.message %></p>
+</a>
+
+            <p class="text-muted" style="font-size: 0.9em;">
+              <%= new Date(notification.created_at).toLocaleString('th-TH') %>
+            </p>
+            <% if (notification.status === 'pending') { %>
+            <div class="d-flex justify-content-between mt-2">
+              <div>
                 <button class="btn btn-success btn-accept">ยอมรับ</button>
                 <button class="btn btn-danger btn-reject">ปฏิเสธ</button>
-              <% } else if (notification.status === 'exchanged') { %>
-                <p class="text-success">ได้รับการแลกเปลี่ยนแล้ว</p>
-              <% } else if (notification.status === 'rejected') { %>
-                <p class="text-danger">ปฏิเสธแล้ว</p>
-              <% } %>
+              </div>
+              <button class="btn btn-delete" style="background-color: gray; color: white;">
+                ลบ
+            </button> <!-- ปุ่มลบ -->
             </div>
+            <% } else if (notification.status === 'exchanged') { %>
+            <p class="text-success">ได้รับการแลกเปลี่ยนแล้ว</p>
+            <% } else if (notification.status === 'rejected') { %>
+            <p class="text-danger">ปฏิเสธแล้ว</p>
+            <% } %>
           </div>
-        <% }) %>
+        </div>
+        
+      <% }) %>
       <% } else { %>
-        <p>ไม่มีการแจ้งเตือน</p>
+      <p>ไม่มีการแจ้งเตือน</p>
       <% } %>
     </div>
-  </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
-  integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
-  crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  
-  <script>
-    $(document).ready(function () {
-      // ยอมรับการแจ้งเตือน
-      $('.btn-accept').click(function() {
-        const notificationId = $(this).closest('.notification').data('id');
-        $.ajax({
-          url: '/accept-notification',
-          type: 'POST',
-          contentType: 'application/json',
-          data: JSON.stringify({ id: notificationId }),
-          success: function(response) {
-            console.log('ยอมรับการแจ้งเตือน:', response);
-            const notificationElement = $(`.notification[data-id=${notificationId}]`);
-            notificationElement.find('.btn-accept, .btn-reject').remove();
-            notificationElement.append('<p class="text-success">ได้รับการแลกเปลี่ยนแล้ว</p>');
-            // Reload หน้าหลังจากอัปเดต
-            location.reload();
-          },
-          error: function(error) {
-            console.error('เกิดข้อผิดพลาดในการยอมรับการแจ้งเตือน:', error);
-            alert('เกิดข้อผิดพลาด โปรดลองใหม่อีกครั้ง');
-          }
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script>
+      $(document).ready(function() {
+        // ยอมรับการแจ้งเตือน
+        $('.btn-accept').click(function() {
+          const notificationId = $(this).closest('.notification').data('id');
+          const notificationElement = $(this).closest('.notification');
+          $.ajax({
+            url: '/accept-notification',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+              id: notificationId
+            }),
+            success: function(response) {
+              console.log('ยอมรับการแจ้งเตือน:', response);
+              notificationElement.find('.btn-accept, .btn-reject').remove(); // ลบปุ่มยอมรับและปฏิเสธ
+              notificationElement.append('<p class="text-success">ได้รับการแลกเปลี่ยนแล้ว</p>'); // แสดงข้อความ
+              // ลบการแจ้งเตือนออกจากหน้า
+              setTimeout(function() {
+                notificationElement.remove(); // ลบการแจ้งเตือนหลังจาก 2 วินาที
+              }, 2000);
+            },
+            error: function(error) {
+              console.error('เกิดข้อผิดพลาดในการยอมรับการแจ้งเตือน:', error);
+              alert('เกิดข้อผิดพลาด โปรดลองใหม่อีกครั้ง');
+            }
+          });
+        });
+
+        // ปฏิเสธการแจ้งเตือน
+        $('.btn-reject').click(function() {
+          const notificationId = $(this).closest('.notification').data('id');
+          const notificationElement = $(this).closest('.notification');
+          $.ajax({
+            url: '/reject-notification',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+              id: notificationId
+            }),
+            success: function(response) {
+              console.log('ปฏิเสธการแจ้งเตือน:', response);
+              notificationElement.find('.btn-accept, .btn-reject').remove(); // ลบปุ่มยอมรับและปฏิเสธ
+              notificationElement.append('<p class="text-danger">ปฏิเสธแล้ว</p>'); // แสดงข้อความ
+              // ลบการแจ้งเตือนออกจากหน้า
+              setTimeout(function() {
+                notificationElement.remove(); // ลบการแจ้งเตือนหลังจาก 2 วินาที
+              }, 2000);
+            },
+            error: function(error) {
+              console.error('เกิดข้อผิดพลาดในการปฏิเสธการแจ้งเตือน:', error);
+              alert('เกิดข้อผิดพลาด โปรดลองใหม่อีกครั้ง');
+            }
+          });
+        });
+
+        // ลบการแจ้งเตือน
+        $('.btn-delete').click(function() {
+          const notificationId = $(this).closest('.notification').data('id');
+          const notificationElement = $(this).closest('.notification');
+          $.ajax({
+            url: '/delete-notification',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+              id: notificationId
+            }),
+            success: function(response) {
+              console.log('ลบการแจ้งเตือน:', response);
+              notificationElement.remove(); // ลบการแจ้งเตือนออกจากหน้า
+            },
+            error: function(error) {
+              console.error('เกิดข้อผิดพลาดในการลบการแจ้งเตือน:', error);
+              alert('เกิดข้อผิดพลาด โปรดลองใหม่อีกครั้ง');
+            }
+          });
         });
       });
+    </script>
 
-      // ปฏิเสธการแจ้งเตือน
-      $('.btn-reject').click(function() {
-        const notificationId = $(this).closest('.notification').data('id');
-        const notificationElement = $(this).closest('.notification');
-        $.ajax({
-          url: '/reject-notification',
-          type: 'POST',
-          contentType: 'application/json',
-          data: JSON.stringify({ id: notificationId }),
-          success: function(response) {
-            console.log('ปฏิเสธการแจ้งเตือน:', response);
-            notificationElement.remove();  // ลบการแจ้งเตือนออกจากหน้า
-          },
-          error: function(error) {
-            console.error('เกิดข้อผิดพลาดในการปฏิเสธการแจ้งเตือน:', error);
-            alert('เกิดข้อผิดพลาด โปรดลองใหม่อีกครั้ง');
-          }
-        });
+    <script src="https://cdn.jsdelivr.net/npm/gasparesganga-jquery-loading-overlay@2.1.7/dist/loadingoverlay.min.js"></script>
+
+    <script>
+      $(document).ready(function() {
+        setTimeout(function() {
+          $('.loader').addClass('hidden'); // เพิ่มคลาส hidden เพื่อซ่อนโลโก้
+          $('.navbar').removeClass('hidden'); // ลบคลาส hidden เพื่อแสดงแถบนำทาง
+        }, 2000); // 2 วินาที (2000 มิลลิวินาที)
       });
-    });
-  </script>
-
-  <script src="https://cdn.jsdelivr.net/npm/gasparesganga-jquery-loading-overlay@2.1.7/dist/loadingoverlay.min.js"></script>
-  
-  <script>
-    $(document).ready(function () {
-      setTimeout(function () {
-        $('.loader').addClass('hidden'); // เพิ่มคลาส hidden เพื่อซ่อนโลโก้
-        $('.navbar').removeClass('hidden'); // ลบคลาส hidden เพื่อแสดงแถบนำทาง
-      }, 2000); // 2 วินาที (2000 มิลลิวินาที)
-    });
-  </script>
+    </script>
 
 </body>
+
 </html>
